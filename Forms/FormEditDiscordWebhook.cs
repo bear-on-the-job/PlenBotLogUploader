@@ -57,6 +57,17 @@ namespace PlenBotLogUploader
             {
                 checkedListBoxBossesEnable.Items.Add(new BossesDisableHelperClass() { BossId = boss.BossId, Text = $"{boss.Type}: {boss.Name} ({boss.BossId})" }, data?.IsBossEnabled(boss.BossId) ?? true);
             }
+
+            // BEAR
+            checkBoxIncludeDamageSummary.Checked = data?.IncludeDamageSummary ?? true;
+            checkBoxIncludeHealingSummary.Checked = data?.IncludeHealingSummary ?? false;
+            checkBoxIncludeBarrierSummary.Checked = data?.IncludeBarrierSummary ?? false;
+            //checkBoxCombineHealingBarrier.Checked = data?.CombineHealingBarrier ?? false;
+            checkBoxAdjustBarrier.Checked = data?.AdjustBarrier ?? false;
+            checkBoxIncludeCleansingSummary.Checked = data?.IncludeCleansingSummary ?? false;
+            checkBoxIncludeStripSummary.Checked = data?.IncludeStripSummary ?? false;
+            checkBoxIncludeCCSummary.Checked = data?.IncludeCCSummary ?? false;
+            comboBoxMaxPlayers.SelectedItem = data?.MaxPlayers.ToString() ?? "10";
         }
 
         private void FormEditDiscordWebhook_FormClosing(object sender, FormClosingEventArgs e)
@@ -86,6 +97,17 @@ namespace PlenBotLogUploader
                     BossesDisable = ConvertCheckboxListToList(),
                     AllowUnknownBossIds = checkBoxAllowUnknownBossIds.Checked,
                     Team = comboBoxTeam.SelectedItem as Team,
+
+                    // BEAR
+                    IncludeDamageSummary = checkBoxIncludeDamageSummary.Checked,
+                    IncludeHealingSummary = checkBoxIncludeHealingSummary.Checked,
+                    IncludeBarrierSummary = checkBoxIncludeBarrierSummary.Checked,
+                    //CombineHealingBarrier = checkBoxCombineHealingBarrier.Checked,
+                    AdjustBarrier = checkBoxAdjustBarrier.Checked,
+                    IncludeCleansingSummary = checkBoxIncludeCleansingSummary.Checked,
+                    IncludeStripSummary = checkBoxIncludeStripSummary.Checked,
+                    IncludeCCSummary = checkBoxIncludeCCSummary.Checked,
+                    MaxPlayers = int.Parse(comboBoxMaxPlayers.SelectedItem.ToString()),
                 };
                 discordPingLink.listViewDiscordWebhooks.Items.Add(new ListViewItem() { Name = reservedId.ToString(), Text = textBoxName.Text, Checked = true });
                 return;
@@ -99,6 +121,18 @@ namespace PlenBotLogUploader
             webhook.BossesDisable = ConvertCheckboxListToList();
             webhook.AllowUnknownBossIds = checkBoxAllowUnknownBossIds.Checked;
             webhook.Team = comboBoxTeam.SelectedItem as Team;
+
+            // BEAR
+            webhook.IncludeDamageSummary = checkBoxIncludeDamageSummary.Checked;
+            webhook.IncludeHealingSummary = checkBoxIncludeHealingSummary.Checked;
+            webhook.IncludeBarrierSummary = checkBoxIncludeBarrierSummary.Checked;
+            //webhook.CombineHealingBarrier = checkBoxCombineHealingBarrier.Checked;
+            webhook.AdjustBarrier = checkBoxAdjustBarrier.Checked;
+            webhook.IncludeCleansingSummary = checkBoxIncludeCleansingSummary.Checked;
+            webhook.IncludeStripSummary = checkBoxIncludeStripSummary.Checked;
+            webhook.IncludeCCSummary = checkBoxIncludeCCSummary.Checked;
+            webhook.MaxPlayers = int.Parse(comboBoxMaxPlayers.SelectedItem.ToString());
+
             discordPingLink.listViewDiscordWebhooks.Items[discordPingLink.listViewDiscordWebhooks.Items.IndexOfKey(reservedId.ToString())] = new ListViewItem() { Name = reservedId.ToString(), Text = textBoxName.Text, Checked = data.Active };
         }
 
@@ -288,6 +322,25 @@ namespace PlenBotLogUploader
                     break;
                 }
             }
+        }
+
+        // BEAR
+        private void checkBoxIncludeBarrierSummary_CheckedChanged(object sender, EventArgs e)
+        {
+            checkBoxAdjustBarrier.Enabled = checkBoxIncludeBarrierSummary.Checked;
+            checkBoxAdjustBarrier.Checked = checkBoxAdjustBarrier.Enabled && checkBoxAdjustBarrier.Checked;
+            UpdateCombineHealingBarrier();
+        }
+        // BEAR
+        private void checkBoxIncludeHealingSummary_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateCombineHealingBarrier();
+        }
+        // BEAR
+        private void UpdateCombineHealingBarrier()
+        {
+            //checkBoxCombineHealingBarrier.Enabled = checkBoxIncludeHealingSummary.Checked && checkBoxIncludeBarrierSummary.Checked;
+            //checkBoxCombineHealingBarrier.Checked = checkBoxCombineHealingBarrier.Enabled && checkBoxCombineHealingBarrier.Checked;
         }
     }
 }

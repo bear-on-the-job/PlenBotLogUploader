@@ -12,5 +12,8 @@ namespace PlenBotLogUploader.DpsReport.ExtraJson
 
         [JsonProperty("deadCount")]
         internal int DeadCount { get; set; }
+
+        [JsonProperty("damageBarrier")]
+        internal int DamageBarrier { get; set; }
     }
 }

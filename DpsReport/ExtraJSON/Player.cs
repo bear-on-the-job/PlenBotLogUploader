@@ -56,5 +56,8 @@ namespace PlenBotLogUploader.DpsReport.ExtraJson
 
         [JsonProperty("defenses")]
         internal Defenses[] Defenses { get; set; }
+
+        [JsonProperty("totalDamageDist")]
+        internal TotalDamageDist[][] TotalDamageDist { get; set; }
     }
 }

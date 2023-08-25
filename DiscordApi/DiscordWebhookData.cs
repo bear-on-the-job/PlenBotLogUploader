@@ -52,8 +52,36 @@ namespace PlenBotLogUploader.DiscordApi
         [JsonProperty("teamId")]
         internal int TeamId { get; set; } = 0;
 
+        //BEAR 
         [JsonProperty("classEmojis")]
         internal List<(string className, string emojiCode)> ClassEmojis { get; set; } = new List<(string className, string emojiCode)> { };
+        //BEAR 
+        [JsonProperty("includeDamageSummary")]
+        internal bool IncludeDamageSummary { get; set; } = true;
+        //BEAR 
+        [JsonProperty("includeHealingSummary")]
+        internal bool IncludeHealingSummary { get; set; } = false;
+        //BEAR 
+        [JsonProperty("includeBarrierSummary")]
+        internal bool IncludeBarrierSummary { get; set; } = false;
+        //BEAR 
+        [JsonProperty("includeCleansingSummary")]
+        internal bool IncludeCleansingSummary { get; set; } = false;
+        //BEAR 
+        [JsonProperty("includeStripSummary")]
+        internal bool IncludeStripSummary { get; set; } = false;
+        //BEAR 
+        [JsonProperty("includeCCSummary")]
+        internal bool IncludeCCSummary { get; set; } = false;
+        //BEAR 
+        [JsonProperty("adjustBarrier")]
+        internal bool AdjustBarrier { get; set; } = false;
+        //BEAR 
+        [JsonProperty("combineBarrierHealing")]
+        internal bool CombineHealingBarrier { get; set; } = false;
+        //BEAR 
+        [JsonProperty("maxPlayers")]
+        internal int MaxPlayers { get; set; } = 10;
 
         /// <summary>
         /// A selected webhook team, with which the webhook should evaluate itself
