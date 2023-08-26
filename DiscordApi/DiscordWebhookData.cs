@@ -82,6 +82,12 @@ namespace PlenBotLogUploader.DiscordApi
         //BEAR 
         [JsonProperty("maxPlayers")]
         internal int MaxPlayers { get; set; } = 10;
+        //BEAR 
+        [JsonProperty("showDpsColumn")]
+        internal bool ShowDpsColumn { get; set; } = true;
+        //BEAR 
+        [JsonProperty("showOpponentIcons")]
+        internal bool ShowOpponentIcons { get; set; } = true;
 
         /// <summary>
         /// A selected webhook team, with which the webhook should evaluate itself

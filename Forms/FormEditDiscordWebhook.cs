@@ -68,6 +68,8 @@ namespace PlenBotLogUploader
             checkBoxIncludeStripSummary.Checked = data?.IncludeStripSummary ?? false;
             checkBoxIncludeCCSummary.Checked = data?.IncludeCCSummary ?? false;
             comboBoxMaxPlayers.SelectedItem = data?.MaxPlayers.ToString() ?? "10";
+            checkBoxShowDPSColumn.Checked = data?.ShowDpsColumn ?? true;
+            checkBoxIncludeOpponentIcons.Checked = data?.ShowOpponentIcons ?? true;
         }
 
         private void FormEditDiscordWebhook_FormClosing(object sender, FormClosingEventArgs e)
@@ -108,6 +110,8 @@ namespace PlenBotLogUploader
                     IncludeStripSummary = checkBoxIncludeStripSummary.Checked,
                     IncludeCCSummary = checkBoxIncludeCCSummary.Checked,
                     MaxPlayers = int.Parse(comboBoxMaxPlayers.SelectedItem.ToString()),
+                    ShowDpsColumn = checkBoxShowDPSColumn.Checked,
+                    ShowOpponentIcons = checkBoxIncludeOpponentIcons.Checked,
                 };
                 discordPingLink.listViewDiscordWebhooks.Items.Add(new ListViewItem() { Name = reservedId.ToString(), Text = textBoxName.Text, Checked = true });
                 return;
@@ -132,6 +136,8 @@ namespace PlenBotLogUploader
             webhook.IncludeStripSummary = checkBoxIncludeStripSummary.Checked;
             webhook.IncludeCCSummary = checkBoxIncludeCCSummary.Checked;
             webhook.MaxPlayers = int.Parse(comboBoxMaxPlayers.SelectedItem.ToString());
+            webhook.ShowDpsColumn = checkBoxShowDPSColumn.Checked;
+            webhook.ShowOpponentIcons = checkBoxIncludeOpponentIcons.Checked;
 
             discordPingLink.listViewDiscordWebhooks.Items[discordPingLink.listViewDiscordWebhooks.Items.IndexOfKey(reservedId.ToString())] = new ListViewItem() { Name = reservedId.ToString(), Text = textBoxName.Text, Checked = data.Active };
         }
@@ -341,6 +347,12 @@ namespace PlenBotLogUploader
         {
             //checkBoxCombineHealingBarrier.Enabled = checkBoxIncludeHealingSummary.Checked && checkBoxIncludeBarrierSummary.Checked;
             //checkBoxCombineHealingBarrier.Checked = checkBoxCombineHealingBarrier.Enabled && checkBoxCombineHealingBarrier.Checked;
+        }
+
+        private void checkBoxIncludeDamageSummary_CheckedChanged(object sender, EventArgs e)
+        {
+            checkBoxShowDPSColumn.Enabled = checkBoxIncludeDamageSummary.Checked;
+            checkBoxShowDPSColumn.Checked = checkBoxShowDPSColumn.Enabled && checkBoxShowDPSColumn.Checked;
         }
     }
 }

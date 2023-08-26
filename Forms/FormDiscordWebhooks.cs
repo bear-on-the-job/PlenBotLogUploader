@@ -447,15 +447,29 @@ namespace PlenBotLogUploader
                             .OrderByDescending(x => x.DpsTargets.Sum(y => y[0].Damage))
                             .Take(webhook.MaxPlayers)
                             .ToArray();
-                        var damageSummary = new TextTable(4, tableStyle, tableBorders);
-                        damageSummary.SetColumnWidthRange(0, 3, 3);
-                        damageSummary.SetColumnWidthRange(1, 25, 25);
-                        damageSummary.SetColumnWidthRange(2, 7, 7);
-                        damageSummary.SetColumnWidthRange(3, 6, 6);
-                        damageSummary.AddCell("#", tableCellCenterAlign);
-                        damageSummary.AddCell("Name");
-                        damageSummary.AddCell("DMG", tableCellRightAlign);
-                        damageSummary.AddCell("DPS", tableCellRightAlign);
+                        var damageSummary = new TextTable(webhook.ShowDpsColumn ? 4 : 3, tableStyle, tableBorders);
+                        
+                        if (webhook.ShowDpsColumn)
+                        {
+                            damageSummary.SetColumnWidthRange(0, 3, 3);
+                            damageSummary.SetColumnWidthRange(1, 25, 25);
+                            damageSummary.SetColumnWidthRange(2, 7, 7);
+                            damageSummary.SetColumnWidthRange(3, 6, 6);
+                            damageSummary.AddCell("#", tableCellCenterAlign);
+                            damageSummary.AddCell("Name");
+                            damageSummary.AddCell("DMG", tableCellRightAlign);
+                            damageSummary.AddCell("DPS", tableCellRightAlign);
+                        }
+                        else
+                        {
+                            damageSummary.SetColumnWidthRange(0, 3, 3);
+                            damageSummary.SetColumnWidthRange(1, 27, 27);
+                            damageSummary.SetColumnWidthRange(2, 12, 12);
+                            damageSummary.AddCell("#", tableCellCenterAlign);
+                            damageSummary.AddCell("Name");
+                            damageSummary.AddCell("DMG", tableCellRightAlign);
+                        }
+                        
                         var rank = 0;
                         foreach (var player in damageStats)
                         {
@@ -463,7 +477,11 @@ namespace PlenBotLogUploader
                             damageSummary.AddCell($"{rank}", tableCellCenterAlign);
                             damageSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
                             damageSummary.AddCell($"{player.DpsTargets.Sum(y => y[0].Damage).ParseAsK()}", tableCellRightAlign);
-                            damageSummary.AddCell($"{player.DpsTargets.Sum(y => y[0].Dps).ParseAsK()}", tableCellRightAlign);
+
+                            if (webhook.ShowDpsColumn)
+                            {
+                                damageSummary.AddCell($"{player.DpsTargets.Sum(y => y[0].Dps).ParseAsK()}", tableCellRightAlign);
+                            }
                         }
 
                         damageField.Name = "Damage summary:";
@@ -522,7 +540,7 @@ namespace PlenBotLogUploader
                         // healing summary
                         var healingStats = reportJSON.ExtraJson.Players
                             .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtHealingStats?.OutgoingHealingAllies?.Any() == true))
-                            .OrderByDescending(x => x.ExtHealingStats.OutgoingHealingAllies.Aggregate(0, (sum, next) => sum + (next.FirstOrDefault()?.Healing ?? 0), sum => sum))
+                            .OrderByDescending(x => x.ExtHealingStats.OutgoingHealingAllies.Sum(p => p.FirstOrDefault()?.Healing ?? 0))
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var healingSummary = new TextTable(3, tableStyle, tableBorders);
@@ -535,6 +553,10 @@ namespace PlenBotLogUploader
                         rank = 0;
                         foreach (var player in healingStats)
                         {
+                            var healing = player.ExtHealingStats.OutgoingHealingAllies.Sum(p => p.FirstOrDefault()?.Healing ?? 0);
+
+                            if (healing < 1) break;
+
                             rank++;
                             healingSummary.AddCell($"{rank}", tableCellCenterAlign);
                             healingSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
@@ -547,7 +569,7 @@ namespace PlenBotLogUploader
                         // barrier summary
                         var barrierStats = reportJSON.ExtraJson.Players
                             .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtBarrierStats?.OutgoingBarrierAllies?.Any() == true))
-                            .OrderByDescending(x => x.ExtBarrierStats.OutgoingBarrierAllies.Aggregate(0, (sum, next) => sum + (next.FirstOrDefault()?.Barrier ?? 0), sum => sum))
+                            .OrderByDescending(x => x.ExtBarrierStats.OutgoingBarrierAllies.Sum(x => x.FirstOrDefault()?.Barrier ?? 0))
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var barrierSummary = new TextTable(3, tableStyle, tableBorders);
@@ -560,7 +582,7 @@ namespace PlenBotLogUploader
                         rank = 0;
                         foreach (var player in barrierStats)
                         {   
-                            var barrier = player.ExtBarrierStats.OutgoingBarrierAllies.Aggregate(0, (sum, next) => sum + (next.FirstOrDefault()?.Barrier ?? 0), sum => sum);
+                            var barrier = player.ExtBarrierStats.OutgoingBarrierAllies.Sum(x => x.FirstOrDefault()?.Barrier ?? 0);
 
                             if (webhook.AdjustBarrier)
                             {
@@ -568,6 +590,8 @@ namespace PlenBotLogUploader
                                 var absorbedBarrier = reportJSON.ExtraJson.Players.Sum(p => p.Defenses.FirstOrDefault()?.DamageBarrier ?? 0);
                                 barrier = (int)((double)barrier * ((double)absorbedBarrier / (double)totalBarrier));
                             }
+
+                            if (barrier < 1) break;
 
                             rank++;
                             barrierSummary.AddCell($"{rank}", tableCellCenterAlign);
@@ -612,17 +636,21 @@ namespace PlenBotLogUploader
                         rank = 0;
                         foreach (var player in ccStats)
                         {
+                            var hitCount = player.TotalDamageDist.Sum
+                            (
+                                attack => attack
+                                // Filter to only skills that match profession and skill ID.
+                                .Where(skill => mapping.Any(m => m.professions.Any(p => p == player.Profession) && m.skills.Any(s => s.id == skill.Id)))
+                                // Sum the skills multiplying by matching skill ID coefficient.
+                                .Sum(skill => skill.ConnectedHits * mapping.FirstOrDefault(m => m.professions.Any(p => p == player.Profession)).skills.FirstOrDefault(s => s.id == skill.Id).coefficient)
+                            );
+
+                            if (hitCount < 1) break;
+
                             rank++;
                             ccSummary.AddCell($"{rank}", tableCellCenterAlign);
                             ccSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
-                            ccSummary.AddCell($"{player.TotalDamageDist.Sum
-                                (
-                                    attack => attack
-                                    // Filter to only skills that match profession and skill ID.
-                                    .Where(skill => mapping.Any(m => m.professions.Any(p => p == player.Profession) && m.skills.Any(s => s.id == skill.Id)))
-                                    // Sum the skills multiplying by matching skill ID coefficient.
-                                    .Sum(skill => skill.ConnectedHits * mapping.FirstOrDefault(m => m.professions.Any(p => p == player.Profession)).skills.FirstOrDefault(s => s.id == skill.Id).coefficient)
-                                )}", tableCellRightAlign);
+                            ccSummary.AddCell($"{hitCount}", tableCellRightAlign);
                         }
 
                         ccField.Name = "CC summary:";
@@ -634,47 +662,50 @@ namespace PlenBotLogUploader
                         discordContentEmbed.Fields.Add(squadField);
                         discordContentEmbed.Fields.Add(enemyField);
 
-                        if (enemyClasses.Count > 0)
+                        if (webhook.ShowOpponentIcons)
                         {
-                            discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                            if (enemyClasses.Count > 0)
                             {
-                                Name = string.Join("    ", enemyClasses.Take(4)),
-                                Value = "",
-                                Inline = true
-                            });
-                        }
-                        if (enemyClasses.Count > 4)
-                        {
-                            discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                                discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = string.Join("    ", enemyClasses.Take(4)),
+                                    Value = "",
+                                    Inline = true
+                                });
+                            }
+                            if (enemyClasses.Count > 4)
                             {
-                                Name = string.Join("    ", enemyClasses.Skip(4).Take(4)),
-                                Value = "",
-                                Inline = true
-                            });
-                        }
-                        if (enemyClasses.Count > 8)
-                        {
-                            discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                                discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = string.Join("    ", enemyClasses.Skip(4).Take(4)),
+                                    Value = "",
+                                    Inline = true
+                                });
+                            }
+                            if (enemyClasses.Count > 8)
                             {
-                                Name = "",
-                                Value = "",
-                                Inline = false
-                            });
-                            discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                                discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = "",
+                                    Value = "",
+                                    Inline = false
+                                });
+                                discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = $"  {string.Join("     ", enemyClasses.Skip(8).Take(4))}",
+                                    Value = "",
+                                    Inline = true
+                                });
+                            }
+                            if (enemyClasses.Count > 12)
                             {
-                                Name = $"  {string.Join("     ", enemyClasses.Skip(8).Take(4))}",
-                                Value = "",
-                                Inline = true
-                            });
-                        }
-                        if (enemyClasses.Count > 12)
-                        {
-                            discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
-                            {
-                                Name = string.Join("    ", enemyClasses.Skip(12).Take(4)),
-                                Value = "",
-                                Inline = true
-                            });
+                                discordContentEmbed.Fields.Add(new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = string.Join("    ", enemyClasses.Skip(12).Take(4)),
+                                    Value = "",
+                                    Inline = true
+                                });
+                            }
                         }
                     }
 
