@@ -510,7 +510,6 @@
         private System.Windows.Forms.CheckBox checkBoxAllowUnknownBossIds;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.CheckBox checkBoxIncludeBarrierSummary;
         private System.Windows.Forms.CheckBox checkBoxIncludeHealingSummary;
         private System.Windows.Forms.CheckBox checkBoxIncludeCleansingSummary;

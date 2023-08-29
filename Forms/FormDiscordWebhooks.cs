@@ -431,7 +431,7 @@ namespace PlenBotLogUploader
                                 Value = $"```{enemySummary.Render()}```"
                             };
 
-                            if (allWebhooks?.Any(w => w.Value?.ClassEmojis?.Any() == true) == true)
+                            if (webhook?.ClassEmojis?.Any() == true)
                             {
                                 enemyClasses = reportJSON.ExtraJson.Targets
                                 .Where(x => x.EnemyPlayer)
@@ -636,14 +636,14 @@ namespace PlenBotLogUploader
                         rank = 0;
                         foreach (var player in ccStats)
                         {
-                            var hitCount = player.TotalDamageDist.Sum
+                            var hitCount = (int)Math.Round(player.TotalDamageDist.Sum
                             (
                                 attack => attack
                                 // Filter to only skills that match profession and skill ID.
                                 .Where(skill => mapping.Any(m => m.professions.Any(p => p == player.Profession) && m.skills.Any(s => s.id == skill.Id)))
                                 // Sum the skills multiplying by matching skill ID coefficient.
                                 .Sum(skill => skill.ConnectedHits * mapping.FirstOrDefault(m => m.professions.Any(p => p == player.Profession)).skills.FirstOrDefault(s => s.id == skill.Id).coefficient)
-                            );
+                            ));
 
                             if (hitCount < 1) break;
 
