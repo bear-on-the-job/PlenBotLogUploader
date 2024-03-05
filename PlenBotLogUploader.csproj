@@ -35,6 +35,8 @@
     <StartupObject>PlenBotLogUploader.Program</StartupObject>
     <PlatformTarget>x64</PlatformTarget>
     <NeutralLanguage>en</NeutralLanguage>
+    <FileVersion>85.0.0.4</FileVersion>
+    <AssemblyVersion>85.0.0.4</AssemblyVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <OutputPath>bin\x64\Debug\</OutputPath>
