@@ -32,7 +32,6 @@
             labelUrl = new System.Windows.Forms.Label();
             textBoxName = new System.Windows.Forms.TextBox();
             textBoxUrl = new System.Windows.Forms.TextBox();
-            checkBoxPlayers = new System.Windows.Forms.CheckBox();
             checkedListBoxBossesEnable = new System.Windows.Forms.CheckedListBox();
             groupBoxWebhookInfo = new System.Windows.Forms.GroupBox();
             groupBoxBossesEnable = new System.Windows.Forms.GroupBox();
@@ -49,22 +48,28 @@
             radioButtonOnlySuccess = new System.Windows.Forms.RadioButton();
             groupBoxTeam = new System.Windows.Forms.GroupBox();
             comboBoxTeam = new System.Windows.Forms.ComboBox();
+            groupBoxLogSummaries = new System.Windows.Forms.GroupBox();
+            radioButtonLogSummaryPlayers = new System.Windows.Forms.RadioButton();
+            radioButtonLogSummarySquadAndPlayers = new System.Windows.Forms.RadioButton();
+            radioButtonLogSummarySquad = new System.Windows.Forms.RadioButton();
+            radioButtonLogSummaryNone = new System.Windows.Forms.RadioButton();
             groupBox1 = new System.Windows.Forms.GroupBox();
+            checkBoxIncludeOpponentIcons = new System.Windows.Forms.CheckBox();
+            checkBoxShowDPSColumn = new System.Windows.Forms.CheckBox();
             checkBoxAdjustBarrier = new System.Windows.Forms.CheckBox();
             comboBoxMaxPlayers = new System.Windows.Forms.ComboBox();
-            label1 = new System.Windows.Forms.Label();
             checkBoxIncludeCCSummary = new System.Windows.Forms.CheckBox();
             checkBoxIncludeStripSummary = new System.Windows.Forms.CheckBox();
+            label1 = new System.Windows.Forms.Label();
             checkBoxIncludeCleansingSummary = new System.Windows.Forms.CheckBox();
             checkBoxIncludeHealingSummary = new System.Windows.Forms.CheckBox();
             checkBoxIncludeBarrierSummary = new System.Windows.Forms.CheckBox();
             checkBoxIncludeDamageSummary = new System.Windows.Forms.CheckBox();
-            checkBoxShowDPSColumn = new System.Windows.Forms.CheckBox();
-            checkBoxIncludeOpponentIcons = new System.Windows.Forms.CheckBox();
             groupBoxWebhookInfo.SuspendLayout();
             groupBoxBossesEnable.SuspendLayout();
             groupBoxConditionalPost.SuspendLayout();
             groupBoxTeam.SuspendLayout();
+            groupBoxLogSummaries.SuspendLayout();
             groupBox1.SuspendLayout();
             SuspendLayout();
             // 
@@ -104,17 +109,6 @@
             textBoxUrl.Size = new System.Drawing.Size(439, 23);
             textBoxUrl.TabIndex = 3;
             // 
-            // checkBoxPlayers
-            // 
-            checkBoxPlayers.AutoSize = true;
-            checkBoxPlayers.Location = new System.Drawing.Point(10, 112);
-            checkBoxPlayers.Margin = new System.Windows.Forms.Padding(4);
-            checkBoxPlayers.Name = "checkBoxPlayers";
-            checkBoxPlayers.Size = new System.Drawing.Size(369, 19);
-            checkBoxPlayers.TabIndex = 5;
-            checkBoxPlayers.Text = "Show detailed information about players and squad performance";
-            checkBoxPlayers.UseVisualStyleBackColor = true;
-            // 
             // checkedListBoxBossesEnable
             // 
             checkedListBoxBossesEnable.BorderStyle = System.Windows.Forms.BorderStyle.None;
@@ -122,7 +116,7 @@
             checkedListBoxBossesEnable.Location = new System.Drawing.Point(7, 22);
             checkedListBoxBossesEnable.Margin = new System.Windows.Forms.Padding(4);
             checkedListBoxBossesEnable.Name = "checkedListBoxBossesEnable";
-            checkedListBoxBossesEnable.Size = new System.Drawing.Size(442, 450);
+            checkedListBoxBossesEnable.Size = new System.Drawing.Size(442, 522);
             checkedListBoxBossesEnable.TabIndex = 6;
             // 
             // groupBoxWebhookInfo
@@ -130,13 +124,12 @@
             groupBoxWebhookInfo.Controls.Add(textBoxName);
             groupBoxWebhookInfo.Controls.Add(labelName);
             groupBoxWebhookInfo.Controls.Add(labelUrl);
-            groupBoxWebhookInfo.Controls.Add(checkBoxPlayers);
             groupBoxWebhookInfo.Controls.Add(textBoxUrl);
             groupBoxWebhookInfo.Location = new System.Drawing.Point(14, 14);
             groupBoxWebhookInfo.Margin = new System.Windows.Forms.Padding(4);
             groupBoxWebhookInfo.Name = "groupBoxWebhookInfo";
             groupBoxWebhookInfo.Padding = new System.Windows.Forms.Padding(4);
-            groupBoxWebhookInfo.Size = new System.Drawing.Size(458, 140);
+            groupBoxWebhookInfo.Size = new System.Drawing.Size(473, 120);
             groupBoxWebhookInfo.TabIndex = 7;
             groupBoxWebhookInfo.TabStop = false;
             groupBoxWebhookInfo.Text = "Webhook info";
@@ -151,11 +144,11 @@
             groupBoxBossesEnable.Controls.Add(buttonUnSelectAllRaids);
             groupBoxBossesEnable.Controls.Add(buttonUnSelectAll);
             groupBoxBossesEnable.Controls.Add(checkedListBoxBossesEnable);
-            groupBoxBossesEnable.Location = new System.Drawing.Point(479, 14);
+            groupBoxBossesEnable.Location = new System.Drawing.Point(495, 14);
             groupBoxBossesEnable.Margin = new System.Windows.Forms.Padding(4);
             groupBoxBossesEnable.Name = "groupBoxBossesEnable";
             groupBoxBossesEnable.Padding = new System.Windows.Forms.Padding(4);
-            groupBoxBossesEnable.Size = new System.Drawing.Size(458, 539);
+            groupBoxBossesEnable.Size = new System.Drawing.Size(458, 611);
             groupBoxBossesEnable.TabIndex = 8;
             groupBoxBossesEnable.TabStop = false;
             groupBoxBossesEnable.Text = "Only upload for selected bosses";
@@ -163,7 +156,8 @@
             // checkBoxAllowUnknownBossIds
             // 
             checkBoxAllowUnknownBossIds.AutoSize = true;
-            checkBoxAllowUnknownBossIds.Location = new System.Drawing.Point(7, 480);
+            checkBoxAllowUnknownBossIds.Location = new System.Drawing.Point(7, 552);
+            checkBoxAllowUnknownBossIds.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             checkBoxAllowUnknownBossIds.Name = "checkBoxAllowUnknownBossIds";
             checkBoxAllowUnknownBossIds.Size = new System.Drawing.Size(256, 19);
             checkBoxAllowUnknownBossIds.TabIndex = 13;
@@ -172,7 +166,7 @@
             // 
             // buttonUnSelectAllGolems
             // 
-            buttonUnSelectAllGolems.Location = new System.Drawing.Point(316, 507);
+            buttonUnSelectAllGolems.Location = new System.Drawing.Point(316, 579);
             buttonUnSelectAllGolems.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAllGolems.Name = "buttonUnSelectAllGolems";
             buttonUnSelectAllGolems.Size = new System.Drawing.Size(63, 26);
@@ -183,7 +177,7 @@
             // 
             // buttonUnSelectWvW
             // 
-            buttonUnSelectWvW.Location = new System.Drawing.Point(386, 507);
+            buttonUnSelectWvW.Location = new System.Drawing.Point(386, 579);
             buttonUnSelectWvW.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectWvW.Name = "buttonUnSelectWvW";
             buttonUnSelectWvW.Size = new System.Drawing.Size(63, 26);
@@ -194,7 +188,7 @@
             // 
             // buttonUnSelectAllFractals
             // 
-            buttonUnSelectAllFractals.Location = new System.Drawing.Point(176, 507);
+            buttonUnSelectAllFractals.Location = new System.Drawing.Point(176, 579);
             buttonUnSelectAllFractals.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAllFractals.Name = "buttonUnSelectAllFractals";
             buttonUnSelectAllFractals.Size = new System.Drawing.Size(63, 26);
@@ -205,7 +199,7 @@
             // 
             // buttonUnSelectAllStrikes
             // 
-            buttonUnSelectAllStrikes.Location = new System.Drawing.Point(246, 507);
+            buttonUnSelectAllStrikes.Location = new System.Drawing.Point(246, 579);
             buttonUnSelectAllStrikes.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAllStrikes.Name = "buttonUnSelectAllStrikes";
             buttonUnSelectAllStrikes.Size = new System.Drawing.Size(63, 26);
@@ -216,7 +210,7 @@
             // 
             // buttonUnSelectAllRaids
             // 
-            buttonUnSelectAllRaids.Location = new System.Drawing.Point(106, 507);
+            buttonUnSelectAllRaids.Location = new System.Drawing.Point(106, 579);
             buttonUnSelectAllRaids.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAllRaids.Name = "buttonUnSelectAllRaids";
             buttonUnSelectAllRaids.Size = new System.Drawing.Size(63, 26);
@@ -227,7 +221,7 @@
             // 
             // buttonUnSelectAll
             // 
-            buttonUnSelectAll.Location = new System.Drawing.Point(5, 507);
+            buttonUnSelectAll.Location = new System.Drawing.Point(5, 579);
             buttonUnSelectAll.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAll.Name = "buttonUnSelectAll";
             buttonUnSelectAll.Size = new System.Drawing.Size(94, 26);
@@ -241,11 +235,11 @@
             groupBoxConditionalPost.Controls.Add(radioButtonOnlySuccessAndFail);
             groupBoxConditionalPost.Controls.Add(radioButtonOnlyFail);
             groupBoxConditionalPost.Controls.Add(radioButtonOnlySuccess);
-            groupBoxConditionalPost.Location = new System.Drawing.Point(14, 162);
+            groupBoxConditionalPost.Location = new System.Drawing.Point(14, 142);
             groupBoxConditionalPost.Margin = new System.Windows.Forms.Padding(4);
             groupBoxConditionalPost.Name = "groupBoxConditionalPost";
             groupBoxConditionalPost.Padding = new System.Windows.Forms.Padding(4);
-            groupBoxConditionalPost.Size = new System.Drawing.Size(458, 76);
+            groupBoxConditionalPost.Size = new System.Drawing.Size(473, 76);
             groupBoxConditionalPost.TabIndex = 9;
             groupBoxConditionalPost.TabStop = false;
             groupBoxConditionalPost.Text = "Use this Webhook if...";
@@ -289,11 +283,11 @@
             // groupBoxTeam
             // 
             groupBoxTeam.Controls.Add(comboBoxTeam);
-            groupBoxTeam.Location = new System.Drawing.Point(14, 246);
+            groupBoxTeam.Location = new System.Drawing.Point(14, 226);
             groupBoxTeam.Margin = new System.Windows.Forms.Padding(4);
             groupBoxTeam.Name = "groupBoxTeam";
             groupBoxTeam.Padding = new System.Windows.Forms.Padding(4);
-            groupBoxTeam.Size = new System.Drawing.Size(458, 54);
+            groupBoxTeam.Size = new System.Drawing.Size(473, 54);
             groupBoxTeam.TabIndex = 7;
             groupBoxTeam.TabStop = false;
             groupBoxTeam.Text = "Associate with a player team";
@@ -309,6 +303,63 @@
             comboBoxTeam.Size = new System.Drawing.Size(439, 23);
             comboBoxTeam.TabIndex = 0;
             // 
+            // groupBoxLogSummaries
+            // 
+            groupBoxLogSummaries.Controls.Add(radioButtonLogSummaryPlayers);
+            groupBoxLogSummaries.Controls.Add(radioButtonLogSummarySquadAndPlayers);
+            groupBoxLogSummaries.Controls.Add(radioButtonLogSummarySquad);
+            groupBoxLogSummaries.Controls.Add(radioButtonLogSummaryNone);
+            groupBoxLogSummaries.Location = new System.Drawing.Point(14, 287);
+            groupBoxLogSummaries.Name = "groupBoxLogSummaries";
+            groupBoxLogSummaries.Size = new System.Drawing.Size(473, 86);
+            groupBoxLogSummaries.TabIndex = 10;
+            groupBoxLogSummaries.TabStop = false;
+            groupBoxLogSummaries.Text = "Log summaries";
+            // 
+            // radioButtonLogSummaryPlayers
+            // 
+            radioButtonLogSummaryPlayers.AutoSize = true;
+            radioButtonLogSummaryPlayers.Location = new System.Drawing.Point(230, 26);
+            radioButtonLogSummaryPlayers.Name = "radioButtonLogSummaryPlayers";
+            radioButtonLogSummaryPlayers.Size = new System.Drawing.Size(174, 19);
+            radioButtonLogSummaryPlayers.TabIndex = 9;
+            radioButtonLogSummaryPlayers.TabStop = true;
+            radioButtonLogSummaryPlayers.Text = "Detailed player performance";
+            radioButtonLogSummaryPlayers.UseVisualStyleBackColor = true;
+            // 
+            // radioButtonLogSummarySquadAndPlayers
+            // 
+            radioButtonLogSummarySquadAndPlayers.AutoSize = true;
+            radioButtonLogSummarySquadAndPlayers.Location = new System.Drawing.Point(230, 56);
+            radioButtonLogSummarySquadAndPlayers.Name = "radioButtonLogSummarySquadAndPlayers";
+            radioButtonLogSummarySquadAndPlayers.Size = new System.Drawing.Size(225, 19);
+            radioButtonLogSummarySquadAndPlayers.TabIndex = 8;
+            radioButtonLogSummarySquadAndPlayers.TabStop = true;
+            radioButtonLogSummarySquadAndPlayers.Text = "Detailed squad and player performace";
+            radioButtonLogSummarySquadAndPlayers.UseVisualStyleBackColor = true;
+            // 
+            // radioButtonLogSummarySquad
+            // 
+            radioButtonLogSummarySquad.AutoSize = true;
+            radioButtonLogSummarySquad.Location = new System.Drawing.Point(11, 56);
+            radioButtonLogSummarySquad.Name = "radioButtonLogSummarySquad";
+            radioButtonLogSummarySquad.Size = new System.Drawing.Size(169, 19);
+            radioButtonLogSummarySquad.TabIndex = 7;
+            radioButtonLogSummarySquad.TabStop = true;
+            radioButtonLogSummarySquad.Text = "Detailed squad information";
+            radioButtonLogSummarySquad.UseVisualStyleBackColor = true;
+            // 
+            // radioButtonLogSummaryNone
+            // 
+            radioButtonLogSummaryNone.AutoSize = true;
+            radioButtonLogSummaryNone.Location = new System.Drawing.Point(11, 26);
+            radioButtonLogSummaryNone.Name = "radioButtonLogSummaryNone";
+            radioButtonLogSummaryNone.Size = new System.Drawing.Size(54, 19);
+            radioButtonLogSummaryNone.TabIndex = 6;
+            radioButtonLogSummaryNone.TabStop = true;
+            radioButtonLogSummaryNone.Text = "None";
+            radioButtonLogSummaryNone.UseVisualStyleBackColor = true;
+            // 
             // groupBox1
             // 
             groupBox1.Controls.Add(checkBoxIncludeOpponentIcons);
@@ -322,14 +373,37 @@
             groupBox1.Controls.Add(checkBoxIncludeHealingSummary);
             groupBox1.Controls.Add(checkBoxIncludeBarrierSummary);
             groupBox1.Controls.Add(checkBoxIncludeDamageSummary);
-            groupBox1.Location = new System.Drawing.Point(14, 308);
+            groupBox1.Location = new System.Drawing.Point(14, 380);
             groupBox1.Margin = new System.Windows.Forms.Padding(4);
             groupBox1.Name = "groupBox1";
             groupBox1.Padding = new System.Windows.Forms.Padding(4);
-            groupBox1.Size = new System.Drawing.Size(458, 245);
+            groupBox1.Size = new System.Drawing.Size(473, 245);
             groupBox1.TabIndex = 10;
             groupBox1.TabStop = false;
             groupBox1.Text = "Player report information";
+            // 
+            // checkBoxIncludeOpponentIcons
+            // 
+            checkBoxIncludeOpponentIcons.AutoSize = true;
+            checkBoxIncludeOpponentIcons.Location = new System.Drawing.Point(10, 186);
+            checkBoxIncludeOpponentIcons.Margin = new System.Windows.Forms.Padding(4);
+            checkBoxIncludeOpponentIcons.Name = "checkBoxIncludeOpponentIcons";
+            checkBoxIncludeOpponentIcons.Size = new System.Drawing.Size(151, 19);
+            checkBoxIncludeOpponentIcons.TabIndex = 17;
+            checkBoxIncludeOpponentIcons.Text = "Include opponent icons";
+            checkBoxIncludeOpponentIcons.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxShowDPSColumn
+            // 
+            checkBoxShowDPSColumn.AutoSize = true;
+            checkBoxShowDPSColumn.Enabled = false;
+            checkBoxShowDPSColumn.Location = new System.Drawing.Point(201, 24);
+            checkBoxShowDPSColumn.Margin = new System.Windows.Forms.Padding(4);
+            checkBoxShowDPSColumn.Name = "checkBoxShowDPSColumn";
+            checkBoxShowDPSColumn.Size = new System.Drawing.Size(123, 19);
+            checkBoxShowDPSColumn.TabIndex = 16;
+            checkBoxShowDPSColumn.Text = "Show DPS column";
+            checkBoxShowDPSColumn.UseVisualStyleBackColor = true;
             // 
             // checkBoxAdjustBarrier
             // 
@@ -352,16 +426,6 @@
             comboBoxMaxPlayers.Size = new System.Drawing.Size(49, 23);
             comboBoxMaxPlayers.TabIndex = 14;
             // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new System.Drawing.Point(10, 214);
-            label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            label1.Name = "label1";
-            label1.Size = new System.Drawing.Size(253, 15);
-            label1.TabIndex = 13;
-            label1.Text = "Number of players to include in summary lists:";
-            // 
             // checkBoxIncludeCCSummary
             // 
             checkBoxIncludeCCSummary.AutoSize = true;
@@ -383,6 +447,16 @@
             checkBoxIncludeStripSummary.TabIndex = 10;
             checkBoxIncludeStripSummary.Text = "Include strip summary";
             checkBoxIncludeStripSummary.UseVisualStyleBackColor = true;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new System.Drawing.Point(10, 214);
+            label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            label1.Name = "label1";
+            label1.Size = new System.Drawing.Size(253, 15);
+            label1.TabIndex = 13;
+            label1.Text = "Number of players to include in summary lists:";
             // 
             // checkBoxIncludeCleansingSummary
             // 
@@ -431,35 +505,13 @@
             checkBoxIncludeDamageSummary.UseVisualStyleBackColor = true;
             checkBoxIncludeDamageSummary.CheckedChanged += checkBoxIncludeDamageSummary_CheckedChanged;
             // 
-            // checkBoxShowDPSColumn
-            // 
-            checkBoxShowDPSColumn.AutoSize = true;
-            checkBoxShowDPSColumn.Enabled = false;
-            checkBoxShowDPSColumn.Location = new System.Drawing.Point(201, 24);
-            checkBoxShowDPSColumn.Margin = new System.Windows.Forms.Padding(4);
-            checkBoxShowDPSColumn.Name = "checkBoxShowDPSColumn";
-            checkBoxShowDPSColumn.Size = new System.Drawing.Size(123, 19);
-            checkBoxShowDPSColumn.TabIndex = 16;
-            checkBoxShowDPSColumn.Text = "Show DPS column";
-            checkBoxShowDPSColumn.UseVisualStyleBackColor = true;
-            // 
-            // checkBoxIncludeOpponentIcons
-            // 
-            checkBoxIncludeOpponentIcons.AutoSize = true;
-            checkBoxIncludeOpponentIcons.Location = new System.Drawing.Point(10, 186);
-            checkBoxIncludeOpponentIcons.Margin = new System.Windows.Forms.Padding(4);
-            checkBoxIncludeOpponentIcons.Name = "checkBoxIncludeOpponentIcons";
-            checkBoxIncludeOpponentIcons.Size = new System.Drawing.Size(151, 19);
-            checkBoxIncludeOpponentIcons.TabIndex = 17;
-            checkBoxIncludeOpponentIcons.Text = "Include opponent icons";
-            checkBoxIncludeOpponentIcons.UseVisualStyleBackColor = true;
-            // 
             // FormEditDiscordWebhook
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             BackColor = System.Drawing.Color.White;
-            ClientSize = new System.Drawing.Size(948, 566);
+            ClientSize = new System.Drawing.Size(968, 637);
+            Controls.Add(groupBoxLogSummaries);
             Controls.Add(groupBox1);
             Controls.Add(groupBoxTeam);
             Controls.Add(groupBoxConditionalPost);
@@ -480,6 +532,8 @@
             groupBoxConditionalPost.ResumeLayout(false);
             groupBoxConditionalPost.PerformLayout();
             groupBoxTeam.ResumeLayout(false);
+            groupBoxLogSummaries.ResumeLayout(false);
+            groupBoxLogSummaries.PerformLayout();
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
             ResumeLayout(false);
@@ -491,7 +545,6 @@
         private System.Windows.Forms.Label labelUrl;
         private System.Windows.Forms.TextBox textBoxName;
         private System.Windows.Forms.TextBox textBoxUrl;
-        private System.Windows.Forms.CheckBox checkBoxPlayers;
         private System.Windows.Forms.CheckedListBox checkedListBoxBossesEnable;
         private System.Windows.Forms.GroupBox groupBoxWebhookInfo;
         private System.Windows.Forms.GroupBox groupBoxBossesEnable;
@@ -508,6 +561,11 @@
         private System.Windows.Forms.Button buttonUnSelectAllRaids;
         private System.Windows.Forms.Button buttonUnSelectAllGolems;
         private System.Windows.Forms.CheckBox checkBoxAllowUnknownBossIds;
+        private System.Windows.Forms.GroupBox groupBoxLogSummaries;
+        private System.Windows.Forms.RadioButton radioButtonLogSummaryNone;
+        private System.Windows.Forms.RadioButton radioButtonLogSummarySquadAndPlayers;
+        private System.Windows.Forms.RadioButton radioButtonLogSummarySquad;
+        private System.Windows.Forms.RadioButton radioButtonLogSummaryPlayers;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.CheckBox checkBoxIncludeBarrierSummary;

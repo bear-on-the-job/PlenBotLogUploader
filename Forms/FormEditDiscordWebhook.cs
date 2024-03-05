@@ -16,7 +16,6 @@ namespace PlenBotLogUploader
         private readonly FormDiscordWebhooks discordPingLink;
         private readonly DiscordWebhookData data;
         private readonly int reservedId;
-        private readonly IDictionary<int, DiscordWebhookData> allWebhooks = DiscordWebhooks.All;
         #endregion
 
         internal FormEditDiscordWebhook(FormDiscordWebhooks discordPingLink, DiscordWebhookData data, int reservedId)
@@ -41,7 +40,21 @@ namespace PlenBotLogUploader
                     radioButtonOnlySuccessAndFail.Checked = true;
                     break;
             }
-            checkBoxPlayers.Checked = data?.ShowPlayers ?? true;
+            switch (data?.SummaryType ?? DiscordWebhookDataLogSummaryType.SquadAndPlayers)
+            {
+                case DiscordWebhookDataLogSummaryType.SquadAndPlayers:
+                    radioButtonLogSummarySquadAndPlayers.Checked = true;
+                    break;
+                case DiscordWebhookDataLogSummaryType.SquadOnly:
+                    radioButtonLogSummarySquad.Checked = true;
+                    break;
+                case DiscordWebhookDataLogSummaryType.PlayersOnly:
+                    radioButtonLogSummaryPlayers.Checked = true;
+                    break;
+                default:
+                    radioButtonLogSummaryNone.Checked = true;
+                    break;
+            }
             checkBoxAllowUnknownBossIds.Checked = data?.AllowUnknownBossIds ?? false;
             var bosses = Bosses.All
                 .OrderBy(x => x.Type)
@@ -55,7 +68,11 @@ namespace PlenBotLogUploader
             comboBoxTeam.SelectedItem = data?.Team ?? teams[0];
             foreach (var boss in bosses.AsSpan())
             {
-                checkedListBoxBossesEnable.Items.Add(new BossesDisableHelperClass() { BossId = boss.BossId, Text = $"{boss.Type}: {boss.Name} ({boss.BossId})" }, data?.IsBossEnabled(boss.BossId) ?? true);
+                checkedListBoxBossesEnable.Items.Add(new BossesDisableHelperClass()
+                {
+                    BossId = boss.BossId,
+                    Text = $"{boss.Type}: {boss.Name} ({boss.BossId})" + (((boss.InternalDescription?.Length ?? 0) > 0) ? $" [{boss.InternalDescription}]" : null)
+                }, data?.IsBossEnabled(boss.BossId) ?? true);
             }
 
             // BEAR
@@ -87,16 +104,29 @@ namespace PlenBotLogUploader
             {
                 successFailToggle = DiscordWebhookDataSuccessToggle.OnFailOnly;
             }
+            var summaryType = DiscordWebhookDataLogSummaryType.SquadAndPlayers;
+            if (radioButtonLogSummaryNone.Checked)
+            {
+                summaryType = DiscordWebhookDataLogSummaryType.None;
+            }
+            else if (radioButtonLogSummaryPlayers.Checked)
+            {
+                summaryType = DiscordWebhookDataLogSummaryType.PlayersOnly;
+            }
+            else if (radioButtonLogSummarySquad.Checked)
+            {
+                summaryType = DiscordWebhookDataLogSummaryType.SquadOnly;
+            }
             if (data is null)
             {
-                allWebhooks[reservedId] = new DiscordWebhookData()
+                DiscordWebhooks.All[reservedId] = new DiscordWebhookData()
                 {
                     Active = true,
                     Name = textBoxName.Text,
                     Url = textBoxUrl.Text,
                     SuccessFailToggle = successFailToggle,
-                    ShowPlayers = checkBoxPlayers.Checked,
-                    BossesDisable = ConvertCheckboxListToList(),
+                    SummaryType = summaryType,
+                    BossesDisable = ConvertCheckboxListToArrayOfBossIds(),
                     AllowUnknownBossIds = checkBoxAllowUnknownBossIds.Checked,
                     Team = comboBoxTeam.SelectedItem as Team,
 
@@ -113,16 +143,21 @@ namespace PlenBotLogUploader
                     ShowDpsColumn = checkBoxShowDPSColumn.Checked,
                     ShowOpponentIcons = checkBoxIncludeOpponentIcons.Checked,
                 };
-                discordPingLink.listViewDiscordWebhooks.Items.Add(new ListViewItem() { Name = reservedId.ToString(), Text = textBoxName.Text, Checked = true });
+                discordPingLink.listViewDiscordWebhooks.Items.Add(new ListViewItem()
+                {
+                    Name = reservedId.ToString(),
+                    Text = textBoxName.Text,
+                    Checked = true,
+                });
                 return;
             }
-            var webhook = allWebhooks[reservedId];
+            var webhook = DiscordWebhooks.All[reservedId];
             webhook.Active = data.Active;
             webhook.Name = textBoxName.Text;
             webhook.Url = textBoxUrl.Text;
             webhook.SuccessFailToggle = successFailToggle;
-            webhook.ShowPlayers = checkBoxPlayers.Checked;
-            webhook.BossesDisable = ConvertCheckboxListToList();
+            webhook.SummaryType = summaryType;
+            webhook.BossesDisable = ConvertCheckboxListToArrayOfBossIds();
             webhook.AllowUnknownBossIds = checkBoxAllowUnknownBossIds.Checked;
             webhook.Team = comboBoxTeam.SelectedItem as Team;
 
@@ -139,10 +174,15 @@ namespace PlenBotLogUploader
             webhook.ShowDpsColumn = checkBoxShowDPSColumn.Checked;
             webhook.ShowOpponentIcons = checkBoxIncludeOpponentIcons.Checked;
 
-            discordPingLink.listViewDiscordWebhooks.Items[discordPingLink.listViewDiscordWebhooks.Items.IndexOfKey(reservedId.ToString())] = new ListViewItem() { Name = reservedId.ToString(), Text = textBoxName.Text, Checked = data.Active };
+            discordPingLink.listViewDiscordWebhooks.Items[discordPingLink.listViewDiscordWebhooks.Items.IndexOfKey(reservedId.ToString())] = new ListViewItem()
+            {
+                Name = reservedId.ToString(),
+                Text = textBoxName.Text,
+                Checked = data.Active,
+            };
         }
 
-        private int[] ConvertCheckboxListToList()
+        private int[] ConvertCheckboxListToArrayOfBossIds()
         {
             var list = new List<int>();
             for (var i = 0; i < checkedListBoxBossesEnable.Items.Count; i++)

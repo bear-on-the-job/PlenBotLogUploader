@@ -39,7 +39,12 @@ namespace PlenBotLogUploader.Tools
         /// <summary>
         /// Make the WvW summary embed appended to the beginning of the session texts
         /// </summary>
-        internal bool MakeWvwSummaryEmbed { get; set; }
+        internal bool MakeWvWSummaryEmbed { get; set; }
+
+        /// <summary>
+        /// Enable showing of an embed for all WvW logs
+        /// </summary>
+        internal bool EnableWvWLogList { get; set; }
 
         /// <summary>
         /// Whether to use SelectedWebhooks for the session ping instead of all active sessions
@@ -49,6 +54,6 @@ namespace PlenBotLogUploader.Tools
         /// <summary>
         /// Selected webhooks to be executed
         /// </summary>
-        internal List<DiscordWebhookData> SelectedWebhooks { get; set; } = new();
+        internal List<DiscordWebhookData> SelectedWebhooks { get; set; } = [];
     }
 }

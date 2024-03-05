@@ -29,9 +29,9 @@ namespace PlenBotLogUploader
     {
         #region definitions
         // properties
-        internal List<DpsReportJson> SessionLogs { get; } = new List<DpsReportJson>();
+        internal List<DpsReportJson> SessionLogs { get; } = [];
         internal bool TwitchChannelJoined { get; set; } = false;
-        internal HttpClientController HttpClientController { get; } = new HttpClientController();
+        internal HttpClientController HttpClientController { get; } = new();
         internal bool StartedMinimised { get; private set; } = false;
         internal MumbleReader MumbleReader { get; set; }
         internal bool UpdateFound
@@ -43,13 +43,13 @@ namespace PlenBotLogUploader
                 {
                     buttonUpdate.Invoke(() =>
                     {
-                        buttonUpdate.Text = (value) ? "Update the uploader" : "Check for updates";
+                        buttonUpdate.Text = value ? "Update the uploader" : "Check for updates";
                         buttonUpdate.NotifyDefault(value);
                     });
                 }
                 else
                 {
-                    buttonUpdate.Text = (value) ? "Update the uploader" : "Check for updates";
+                    buttonUpdate.Text = value ? "Update the uploader" : "Check for updates";
                     buttonUpdate.NotifyDefault(value);
                 }
                 _updateFound = value;
@@ -70,12 +70,12 @@ namespace PlenBotLogUploader
         private readonly FormAleevaIntegrations aleevaLink;
         private readonly FormGw2Bot gw2botLink;
         private readonly FormTeams teamsLink;
-        private readonly List<string> allSessionLogs = new();
-        private readonly Regex songSmartCommandRegex = new(@"(?:(?:song)|(?:music)){1}(?:(?:\?)|(?: is)|(?: name))+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Multiline);
-        private readonly Regex buildSmartCommandRegex = new(@"(?:(?:build)){1}(?:(?:\?)|(?: is))+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Multiline);
+        private readonly List<string> allSessionLogs = [];
+        private readonly Regex songSmartCommandRegex = songRegex();
+        private readonly Regex buildSmartCommandRegex = buildRegex();
         private SemaphoreSlim semaphore;
         private TwitchChatClient chatConnect;
-        private FileSystemWatcher watcher = new() { Filter = "*.*", IncludeSubdirectories = true, NotifyFilter = NotifyFilters.FileName };
+        private readonly ArcLogsChangeObserver watcher;
         private int reconnectedFailCounter = 0;
         private int recentUploadFailCounter = 0;
         private int logsCount = 0;
@@ -85,11 +85,22 @@ namespace PlenBotLogUploader
         private bool lastLogBossCM = false;
         private bool _updateFound = false;
         private GitHubReleaseLatest latestRelease = null;
+        private Dictionary<string, string> defaultPostData = new()
+        {
+            { "generator", "ei" },
+            { "json", "1" },
+        };
 
         // constants
         private const int minFileSize = 8192;
         private const string plenbotVersionFileURL = "https://raw.githubusercontent.com/Plenyx/PlenBotLogUploader/master/VERSION";
         private const string plenbotDownloadName = "PlenBotLogUploader.exe";
+
+        // partials
+        [GeneratedRegex(@"(?:(?:build)){1}(?:(?:\?)|(?: is))+", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+        private static partial Regex buildRegex();
+        [GeneratedRegex(@"(?:(?:song)|(?:music)){1}(?:(?:\?)|(?: is)|(?: name))+", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+        private static partial Regex songRegex();
         #endregion
 
         #region constructor
@@ -116,10 +127,12 @@ namespace PlenBotLogUploader
             gw2botLink = new FormGw2Bot(this);
             teamsLink = new FormTeams();
             MumbleReader = new MumbleReader(false);
+            watcher = new ArcLogsChangeObserver(OnLogCreated);
             #region tooltips
             toolTip.SetToolTip(checkBoxUploadLogs, "If checked, all created logs will be uploaded.");
-            toolTip.SetToolTip(checkBoxPostToTwitch, "If checked, logs will be posted to connected Twitch channel while a streaming software is running.");
+            toolTip.SetToolTip(checkBoxPostToTwitch, "If checked, logs will be posted to connected Twitch channel.");
             toolTip.SetToolTip(checkBoxTwitchOnlySuccess, "If checked, only successful logs will be linked to Twitch channel.");
+            toolTip.SetToolTip(checkBoxOnlyWhenStreamSoftwareRunning, "If checked, logs will be posted to connected Twitch channel only if a streaming software is running like OBS Studio, Twitch Studio or XSplit.");
             toolTip.SetToolTip(checkBoxAnonymiseReports, "If checked, the logs will be generated with fake names and accounts.");
             toolTip.SetToolTip(checkBoxDetailedWvW, "If checked, extended per-target log reports will be generated. (might cause some issues)");
             toolTip.SetToolTip(labelMaximumUploads, "Sets the maximum allowed uploads for drag & drop.");
@@ -153,9 +166,7 @@ namespace PlenBotLogUploader
                     if (Directory.Exists(ApplicationSettings.Current.LogsLocation))
                     {
                         LogsScan(ApplicationSettings.Current.LogsLocation);
-                        watcher.Path = ApplicationSettings.Current.LogsLocation;
-                        watcher.Renamed += OnLogCreated;
-                        watcher.EnableRaisingEvents = true;
+                        watcher.InitAndStart(ApplicationSettings.Current.LogsLocation, ApplicationSettings.Current.UsePollingForLogs ? ArcLogsChangeObserverMode.Polling : default);
                         buttonOpenLogs.Enabled = true;
                     }
                     else
@@ -196,6 +207,10 @@ namespace PlenBotLogUploader
                     {
                         checkBoxTwitchOnlySuccess.Checked = true;
                     }
+                    if (ApplicationSettings.Current.Upload.PostLogsToTwitchOnlyWithStreamingSoftware)
+                    {
+                        checkBoxOnlyWhenStreamSoftwareRunning.Checked = true;
+                    }
                 }
                 if (ApplicationSettings.Current.MinimiseToTray)
                 {
@@ -217,6 +232,10 @@ namespace PlenBotLogUploader
                 {
                     checkBoxSaveLogsToCSV.Checked = true;
                 }
+                if (ApplicationSettings.Current.UsePollingForLogs)
+                {
+                    checkBoxUsePolling.Checked = true;
+                }
                 if (ApplicationSettings.Current.Twitch.Custom.Enabled)
                 {
                     customNameLink.checkBoxCustomNameEnable.Checked = true;
@@ -229,10 +248,6 @@ namespace PlenBotLogUploader
                 {
                     if (File.Exists($@"{ApplicationSettings.Current.Gw2Location}\Gw2-64.exe") || File.Exists($@"{ApplicationSettings.Current.Gw2Location}\Gw2.exe") || File.Exists($@"{ApplicationSettings.Current.Gw2Location}\Guild Wars 2.exe"))
                     {
-                        if (ApplicationSettings.Current.ArcUpdate.UseAddonLoader)
-                        {
-                            arcPluginManagerLink.checkBoxUseAL.Checked = true;
-                        }
                         if (ApplicationSettings.Current.ArcUpdate.Enabled)
                         {
                             arcPluginManagerLink.checkBoxModuleEnabled.Checked = true;
@@ -264,7 +279,8 @@ namespace PlenBotLogUploader
                 logSessionLink.textBoxSessionContent.Text = ApplicationSettings.Current.Session.Message;
                 logSessionLink.radioButtonSortByUpload.Checked = ApplicationSettings.Current.Session.Sort == LogSessionSortBy.UploadTime;
                 logSessionLink.checkBoxSaveToFile.Checked = ApplicationSettings.Current.Session.SaveToFile;
-                logSessionLink.checkBoxMakeWvWSummary.Checked = ApplicationSettings.Current.Session.MakeWvwSummaryEmbed;
+                logSessionLink.checkBoxMakeWvWSummary.Checked = ApplicationSettings.Current.Session.MakeWvWSummaryEmbed;
+                logSessionLink.checkBoxEnableWvWLogList.Checked = ApplicationSettings.Current.Session.EnableWvWLogList;
                 discordWebhooksLink.checkBoxShortenThousands.Checked = ApplicationSettings.Current.ShortenThousands;
                 if (!string.IsNullOrWhiteSpace(ApplicationSettings.Current.Aleeva.RefreshToken) && (DateTime.Now < ApplicationSettings.Current.Aleeva.RefreshTokenExpire))
                 {
@@ -318,10 +334,12 @@ namespace PlenBotLogUploader
                 checkBoxUploadLogs.CheckedChanged += CheckBoxUploadAll_CheckedChanged;
                 checkBoxTrayMinimiseToIcon.CheckedChanged += CheckBoxTrayMinimiseToIcon_CheckedChanged;
                 checkBoxTwitchOnlySuccess.CheckedChanged += CheckBoxTwitchOnlySuccess_CheckedChanged;
+                checkBoxOnlyWhenStreamSoftwareRunning.CheckedChanged += CheckBoxOnlyWhenStreamSoftwareRunning_CheckedChanged;
                 checkBoxStartWhenWindowsStarts.CheckedChanged += CheckBoxStartWhenWindowsStarts_CheckedChanged;
                 checkBoxAnonymiseReports.CheckedChanged += CheckBoxAnonymiseReports_CheckedChanged;
                 checkBoxDetailedWvW.CheckedChanged += CheckBoxDetailedWvW_CheckedChanged;
                 checkBoxSaveLogsToCSV.CheckedChanged += CheckBoxSaveLogsToCSV_CheckedChanged;
+                checkBoxUsePolling.CheckedChanged += CheckBoxUsePolling_CheckedChanged;
                 comboBoxMaxUploads.SelectedIndexChanged += ComboBoxMaxUploads_SelectedIndexChanged;
                 checkBoxAutoUpdate.CheckedChanged += CheckBoxAutoUpdate_CheckedChanged;
                 logSessionLink.checkBoxSupressWebhooks.CheckedChanged += logSessionLink.CheckBoxSupressWebhooks_CheckedChanged;
@@ -403,11 +421,6 @@ namespace PlenBotLogUploader
 
         protected async Task DoDragDropFile(string file)
         {
-            var postData = new Dictionary<string, string>()
-            {
-                { "generator", "ei" },
-                { "json", "1" }
-            };
             if (File.Exists(file) && (file.EndsWith(".evtc") || file.EndsWith(".zevtc")))
             {
                 var archived = false;
@@ -421,7 +434,7 @@ namespace PlenBotLogUploader
                 }
                 try
                 {
-                    await HttpUploadLogAsync(zipfilelocation, postData, true);
+                    await HttpUploadLogAsync(zipfilelocation, defaultPostData, true);
                 }
                 catch
                 {
@@ -441,13 +454,8 @@ namespace PlenBotLogUploader
         #endregion
 
         #region main program methods
-        // triggeres when a file is renamed within the folder, renaming is the last process done by arcdps to create evtc or zevtc files
-        private async void OnLogCreated(object sender, FileSystemEventArgs e)
+        private async void OnLogCreated(FileInfo file)
         {
-            if (!e.FullPath.EndsWith(".evtc") && !e.FullPath.EndsWith(".zevtc"))
-            {
-                return;
-            }
             logsCount++;
             if (!checkBoxUploadLogs.Checked)
             {
@@ -455,27 +463,22 @@ namespace PlenBotLogUploader
             }
             try
             {
-                if (new FileInfo(e.FullPath).Length >= minFileSize)
+                if (file.Length >= minFileSize)
                 {
-                    var zipfilelocation = e.FullPath;
+                    var zipfilelocation = file.FullName;
                     var archived = false;
                     // a workaround so arcdps can release the file for read access
                     Thread.Sleep(1000);
-                    if (!e.FullPath.EndsWith(".zevtc"))
+                    if (!file.FullName.EndsWith(".zevtc"))
                     {
-                        zipfilelocation = $"{ApplicationSettings.LocalDir}{Path.GetFileNameWithoutExtension(e.FullPath)}.zevtc";
+                        zipfilelocation = $"{ApplicationSettings.LocalDir}{Path.GetFileNameWithoutExtension(file.FullName)}.zevtc";
                         using var zipfile = ZipFile.Open(zipfilelocation, ZipArchiveMode.Create);
-                        zipfile.CreateEntryFromFile(@e.FullPath, Path.GetFileName(e.FullPath));
+                        zipfile.CreateEntryFromFile(file.FullName, file.Name);
                         archived = true;
                     }
                     try
                     {
-                        var postData = new Dictionary<string, string>()
-                        {
-                            { "generator", "ei" },
-                            { "json", "1" }
-                        };
-                        await HttpUploadLogAsync(zipfilelocation, postData);
+                        await HttpUploadLogAsync(zipfilelocation, defaultPostData);
                     }
                     finally
                     {
@@ -489,7 +492,7 @@ namespace PlenBotLogUploader
             catch
             {
                 logsCount--;
-                AddToText($">:> Unable to upload the file: {e.FullPath}");
+                AddToText($">:> Unable to upload the file: {file.FullName}");
             }
             UpdateLogCount();
         }
@@ -615,11 +618,6 @@ namespace PlenBotLogUploader
                 }
                 return;
             }
-            var postData = new Dictionary<string, string>()
-            {
-                { "generator", "ei" },
-                { "json", "1" }
-            };
             foreach (var arg in args)
             {
                 if (arg.Equals(Application.ExecutablePath))
@@ -639,7 +637,7 @@ namespace PlenBotLogUploader
                     }
                     try
                     {
-                        await HttpUploadLogAsync(zipfilelocation, postData);
+                        await HttpUploadLogAsync(zipfilelocation, defaultPostData);
                     }
                     catch
                     {
@@ -705,7 +703,7 @@ namespace PlenBotLogUploader
         #region log upload and processing
         internal async Task SendLogToTwitchChatAsync(DpsReportJson reportJSON, bool bypassMessage = false)
         {
-            if (!TwitchChannelJoined || !checkBoxPostToTwitch.Checked || bypassMessage || !IsStreamingSoftwareRunning())
+            if (!TwitchChannelJoined || !checkBoxPostToTwitch.Checked || bypassMessage || (ApplicationSettings.Current.Upload.PostLogsToTwitchOnlyWithStreamingSoftware && !IsStreamingSoftwareRunning()))
             {
                 return;
             }
@@ -757,7 +755,7 @@ namespace PlenBotLogUploader
                         return;
                     }
                     var response = await responseMessage.Content.ReadAsStringAsync();
-                    // workaround for deserialisation application crash if the player list is an empty array, in case the log being corrupted
+                    // workaround for deserialisation and consequent application crash if the player list is an empty array, in case the log being corrupted
                     response = response?.Replace("\"players\": []", "\"players\": {}");
                     try
                     {
@@ -800,7 +798,7 @@ namespace PlenBotLogUploader
                             try
                             {
                                 // log file
-                                File.AppendAllText($"{ApplicationSettings.LocalDir}uploaded_logs.csv", $"{reportJson.ExtraJson?.FightName ?? reportJson.Encounter.Boss};{bossId};{success};{reportJson.ExtraJson?.Duration ?? ""};{reportJson.ExtraJson?.RecordedBy ?? ""};{reportJson.ExtraJson?.EliteInsightsVersion ?? ""};{reportJson.Evtc.Type}{reportJson.Evtc.Version};{reportJson.ConfigAwarePermalink};{reportJson.UserToken}\n");
+                                File.AppendAllText($"{ApplicationSettings.LocalDir}uploaded_logs.csv", $"{reportJson.ExtraJson?.FightName ?? reportJson.Encounter.Boss};{bossId};{success};{reportJson.ExtraJson?.Duration ?? ""};{reportJson.ExtraJson?.RecordedByAccountName ?? ""};{reportJson.ExtraJson?.EliteInsightsVersion ?? ""};{reportJson.Evtc.Type}{reportJson.Evtc.Version};{reportJson.ConfigAwarePermalink};{reportJson.UserToken}\n");
                             }
                             catch (Exception e)
                             {
@@ -1155,7 +1153,7 @@ namespace PlenBotLogUploader
                 AddToText("> PULLS COMMAND USED");
                 if (lastLogBossId > 0)
                 {
-                    await chatConnect.SendChatMessageAsync(ApplicationSettings.Current.Twitch.ChannelName, $"{Bosses.GetBossDataFromId(lastLogBossId).Name}{((lastLogBossCM) ? " CM" : "")} | Current pull: {lastLogPullCounter}");
+                    await chatConnect.SendChatMessageAsync(ApplicationSettings.Current.Twitch.ChannelName, $"{Bosses.GetBossDataFromId(lastLogBossId).Name}{(lastLogBossCM ? " CM" : "")} | Current pull: {lastLogPullCounter}");
                 }
                 return;
             }
@@ -1282,12 +1280,21 @@ namespace PlenBotLogUploader
             toolStripMenuItemDPSReportUserTokens.DropDownItems.Clear();
             if (ApplicationSettings.Current.Upload.DpsReportUserTokens.Count == 0)
             {
-                toolStripMenuItemDPSReportUserTokens.DropDownItems.Add(new ToolStripMenuItem() { Enabled = false, Text = "No user tokens defined" });
+                toolStripMenuItemDPSReportUserTokens.DropDownItems.Add(new ToolStripMenuItem()
+                {
+                    Enabled = false,
+                    Text = "No user tokens defined",
+                });
                 return;
             }
             foreach (var userToken in ApplicationSettings.Current.Upload.DpsReportUserTokens.OrderBy(x => x.Name).ToArray())
             {
-                var index = toolStripMenuItemDPSReportUserTokens.DropDownItems.Add(new ToolStripMenuItemCustom<ApplicationSettingsUploadUserToken>() { Checked = userToken.Active, Text = userToken.Name, LinkedObject = userToken });
+                var index = toolStripMenuItemDPSReportUserTokens.DropDownItems.Add(new ToolStripMenuItemCustom<ApplicationSettingsUploadUserToken>()
+                {
+                    Checked = userToken.Active,
+                    Text = userToken.Name,
+                    LinkedObject = userToken,
+                });
                 toolStripMenuItemDPSReportUserTokens.DropDownItems[index].Click += UserTokenButtonClicked;
             }
         }
@@ -1329,7 +1336,10 @@ namespace PlenBotLogUploader
 
         private void ButtonLogsLocation_Click(object sender, EventArgs e)
         {
-            using var dialog = new FolderBrowserDialog() { Description = "Select the arcdps folder containing the combat logs.\nThe default location is in \"My Documents\\Guild Wars 2\\addons\\arcdps\\arcdps.cbtlogs\\\"" };
+            using var dialog = new FolderBrowserDialog()
+            {
+                Description = "Select the arcdps folder containing the combat logs.\nThe default location is in \"My Documents\\Guild Wars 2\\addons\\arcdps\\arcdps.cbtlogs\\\"",
+            };
             var result = dialog.ShowDialog();
             if (!result.Equals(DialogResult.OK) || string.IsNullOrWhiteSpace(dialog.SelectedPath))
             {
@@ -1339,19 +1349,23 @@ namespace PlenBotLogUploader
             ApplicationSettings.Current.Save();
             logsCount = 0;
             LogsScan(ApplicationSettings.Current.LogsLocation);
-            watcher.Renamed -= OnLogCreated;
-            watcher.Dispose();
-            watcher = null;
-            watcher = new FileSystemWatcher()
+            if (watcher.IsRunning)
             {
-                Path = ApplicationSettings.Current.LogsLocation,
-                Filter = "*.*",
-                IncludeSubdirectories = true,
-                NotifyFilter = NotifyFilters.FileName
-            };
-            watcher.Renamed += OnLogCreated;
-            watcher.EnableRaisingEvents = true;
+                watcher.ChangeRootPath(ApplicationSettings.Current.LogsLocation);
+            }
+            else
+            {
+                watcher.InitAndStart(ApplicationSettings.Current.LogsLocation, ApplicationSettings.Current.UsePollingForLogs ? ArcLogsChangeObserverMode.Polling : default);
+            }
             buttonOpenLogs.Enabled = true;
+        }
+
+        private void CheckBoxUsePolling_CheckedChanged(object sender, System.EventArgs e)
+        {
+            watcher.ChangeMode(checkBoxUsePolling.Checked ? ArcLogsChangeObserverMode.Polling : default);
+
+            ApplicationSettings.Current.UsePollingForLogs = checkBoxUsePolling.Checked;
+            ApplicationSettings.Current.Save();
         }
 
         private void CheckBoxTrayMinimiseToIcon_CheckedChanged(object sender, EventArgs e)
@@ -1407,7 +1421,11 @@ namespace PlenBotLogUploader
 
         private void ToolStripMenuItemPostToTwitch_CheckedChanged(object sender, EventArgs e) => checkBoxPostToTwitch.Checked = toolStripMenuItemPostToTwitch.Checked;
 
-        private void ButtonOpenLogs_Click(object sender, EventArgs e) => Process.Start(new ProcessStartInfo() { UseShellExecute = true, FileName = ApplicationSettings.Current.LogsLocation });
+        private void ButtonOpenLogs_Click(object sender, EventArgs e) => Process.Start(new ProcessStartInfo()
+        {
+            UseShellExecute = true,
+            FileName = ApplicationSettings.Current.LogsLocation,
+        });
 
         private void OpenDPSReportSettings()
         {
@@ -1542,7 +1560,12 @@ namespace PlenBotLogUploader
                 buttonUpdate.Enabled = true;
                 return;
             }
-            Process.Start(new ProcessStartInfo() { UseShellExecute = true, FileName = $"{ApplicationSettings.LocalDir}PlenBotLogUploader_Update.exe", Arguments = $"-update {Path.GetFileName(Application.ExecutablePath.Replace('/', '\\'))}{((appStartup && StartedMinimised) ? " -m" : "")}" });
+            Process.Start(new ProcessStartInfo()
+            {
+                UseShellExecute = true,
+                FileName = $"{ApplicationSettings.LocalDir}PlenBotLogUploader_Update.exe",
+                Arguments = $"-update {Path.GetFileName(Application.ExecutablePath.Replace('/', '\\'))}{((appStartup && StartedMinimised) ? " -m" : "")}",
+            });
             ExitApp();
         }
 
@@ -1564,7 +1587,11 @@ namespace PlenBotLogUploader
             {
                 return;
             }
-            Process.Start(new ProcessStartInfo() { UseShellExecute = true, FileName = ApplicationSettings.LocalDir });
+            Process.Start(new ProcessStartInfo()
+            {
+                UseShellExecute = true,
+                FileName = ApplicationSettings.LocalDir,
+            });
             var reset = new ApplicationSettings();
             reset.Save();
             ExitApp();
@@ -1620,6 +1647,12 @@ namespace PlenBotLogUploader
         private void CheckBoxSaveLogsToCSV_CheckedChanged(object sender, EventArgs e)
         {
             ApplicationSettings.Current.Upload.SaveToCsvEnabled = checkBoxSaveLogsToCSV.Checked;
+            ApplicationSettings.Current.Save();
+        }
+
+        private void CheckBoxOnlyWhenStreamSoftwareRunning_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplicationSettings.Current.Upload.PostLogsToTwitchOnlyWithStreamingSoftware = checkBoxOnlyWhenStreamSoftwareRunning.Checked;
             ApplicationSettings.Current.Save();
         }
         #endregion

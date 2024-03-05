@@ -36,7 +36,8 @@ namespace PlenBotLogUploader
             Hide();
             ApplicationSettings.Current.Session.Name = textBoxSessionName.Text;
             ApplicationSettings.Current.Session.Message = textBoxSessionContent.Text;
-            ApplicationSettings.Current.Session.MakeWvwSummaryEmbed = checkBoxMakeWvWSummary.Checked;
+            ApplicationSettings.Current.Session.MakeWvWSummaryEmbed = checkBoxMakeWvWSummary.Checked;
+            ApplicationSettings.Current.Session.EnableWvWLogList = checkBoxEnableWvWLogList.Checked;
             ApplicationSettings.Current.Save();
         }
 
@@ -70,9 +71,10 @@ namespace PlenBotLogUploader
                 ElapsedTime = elapsedTime,
                 ElapsedTimeSpan = elapsedTimeSpan,
                 SortBy = radioButtonSortByUpload.Checked ? LogSessionSortBy.UploadTime : LogSessionSortBy.Wing,
-                MakeWvwSummaryEmbed = checkBoxMakeWvWSummary.Checked,
+                MakeWvWSummaryEmbed = checkBoxMakeWvWSummary.Checked,
+                EnableWvWLogList = checkBoxEnableWvWLogList.Checked,
                 UseSelectedWebhooksInstead = radioButtonOnlySelectedWebhooks.Checked,
-                SelectedWebhooks = ConvertCheckboxListToList()
+                SelectedWebhooks = ConvertCheckboxListToList(),
             };
             var sessionNameFormatted = CleanSessionName();
             var fileName = $"{((!string.IsNullOrWhiteSpace(sessionNameFormatted)) ? $"{sessionNameFormatted} " : "")}{sessionTimeStarted.Year}-{sessionTimeStarted.Month}-{sessionTimeStarted.Day} {sessionTimeStarted.Hour}-{sessionTimeStarted.Minute}-{sessionTimeStarted.Second}";
@@ -81,7 +83,7 @@ namespace PlenBotLogUploader
             {
                 var success = (reportJSON.Encounter.Success ?? false) ? "true" : "false";
                 File.AppendAllText($"{ApplicationSettings.LocalDir}{fileName}.csv",
-                    $"{reportJSON.ExtraJson?.FightName ?? reportJSON.Encounter.Boss};{reportJSON.Encounter.BossId};{success};{reportJSON.ExtraJson?.Duration ?? ""};{reportJSON.ExtraJson?.RecordedBy ?? ""};{reportJSON.ExtraJson?.EliteInsightsVersion ?? ""};{reportJSON.Evtc.Type}{reportJSON.Evtc.Version};{reportJSON.ConfigAwarePermalink};{reportJSON.UserToken}\n");
+                    $"{reportJSON.ExtraJson?.FightName ?? reportJSON.Encounter.Boss};{reportJSON.Encounter.BossId};{success};{reportJSON.ExtraJson?.Duration ?? ""};{reportJSON.ExtraJson?.RecordedByAccountName ?? ""};{reportJSON.ExtraJson?.EliteInsightsVersion ?? ""};{reportJSON.Evtc.Type}{reportJSON.Evtc.Version};{reportJSON.ConfigAwarePermalink};{reportJSON.UserToken}\n");
             }
             _ = SendSessionWebhooks(logSessionSettings);
         }
@@ -151,9 +153,9 @@ namespace PlenBotLogUploader
                 var item = checkedListBoxSelectedWebhooks.Items[i];
                 if ((item is DiscordWebhooksHelperClass discordWebhookHelper) &&
                     checkedListBoxSelectedWebhooks.GetItemChecked(i) &&
-                    allWebhooks.ContainsKey(discordWebhookHelper.WebhookId))
+                    allWebhooks.TryGetValue(discordWebhookHelper.WebhookId, out DiscordWebhookData discordWebhookData))
                 {
-                    list.Add(allWebhooks[discordWebhookHelper.WebhookId]);
+                    list.Add(discordWebhookData);
                 }
             }
             return list;
@@ -165,7 +167,11 @@ namespace PlenBotLogUploader
             var allWebhooks = DiscordWebhooks.All;
             foreach (var webhookNumber in allWebhooks.Keys)
             {
-                checkedListBoxSelectedWebhooks.Items.Add(new DiscordWebhooksHelperClass() { WebhookId = webhookNumber, Text = $"{allWebhooks[webhookNumber].Name}" }, allWebhooks[webhookNumber].Active);
+                checkedListBoxSelectedWebhooks.Items.Add(new DiscordWebhooksHelperClass()
+                {
+                    WebhookId = webhookNumber,
+                    Text = $"{allWebhooks[webhookNumber].Name}",
+                }, allWebhooks[webhookNumber].Active);
             }
         }
 

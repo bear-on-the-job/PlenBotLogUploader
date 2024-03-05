@@ -28,6 +28,7 @@
         {
             components = new System.ComponentModel.Container();
             groupBoxTwitchSettings = new System.Windows.Forms.GroupBox();
+            checkBoxOnlyWhenStreamSoftwareRunning = new System.Windows.Forms.CheckBox();
             buttonTwitchCommands = new System.Windows.Forms.Button();
             checkBoxTwitchOnlySuccess = new System.Windows.Forms.CheckBox();
             buttonDisConnectTwitch = new System.Windows.Forms.Button();
@@ -38,6 +39,7 @@
             buttonBossData = new System.Windows.Forms.Button();
             checkBoxUploadLogs = new System.Windows.Forms.CheckBox();
             groupBoxArcdpsLogs = new System.Windows.Forms.GroupBox();
+            checkBoxUsePolling = new System.Windows.Forms.CheckBox();
             checkBoxSaveLogsToCSV = new System.Windows.Forms.CheckBox();
             checkBoxDetailedWvW = new System.Windows.Forms.CheckBox();
             checkBoxAnonymiseReports = new System.Windows.Forms.CheckBox();
@@ -98,6 +100,7 @@
             // 
             // groupBoxTwitchSettings
             // 
+            groupBoxTwitchSettings.Controls.Add(checkBoxOnlyWhenStreamSoftwareRunning);
             groupBoxTwitchSettings.Controls.Add(buttonTwitchCommands);
             groupBoxTwitchSettings.Controls.Add(checkBoxTwitchOnlySuccess);
             groupBoxTwitchSettings.Controls.Add(buttonDisConnectTwitch);
@@ -114,6 +117,16 @@
             groupBoxTwitchSettings.TabStop = false;
             groupBoxTwitchSettings.Text = "Twitch settings";
             // 
+            // checkBoxOnlyWhenStreamSoftwareRunning
+            // 
+            checkBoxOnlyWhenStreamSoftwareRunning.AutoSize = true;
+            checkBoxOnlyWhenStreamSoftwareRunning.Location = new System.Drawing.Point(11, 113);
+            checkBoxOnlyWhenStreamSoftwareRunning.Name = "checkBoxOnlyWhenStreamSoftwareRunning";
+            checkBoxOnlyWhenStreamSoftwareRunning.Size = new System.Drawing.Size(273, 24);
+            checkBoxOnlyWhenStreamSoftwareRunning.TabIndex = 13;
+            checkBoxOnlyWhenStreamSoftwareRunning.Text = "post only if streaming app is running";
+            checkBoxOnlyWhenStreamSoftwareRunning.UseVisualStyleBackColor = true;
+            // 
             // buttonTwitchCommands
             // 
             buttonTwitchCommands.Location = new System.Drawing.Point(8, 185);
@@ -129,7 +142,7 @@
             // 
             checkBoxTwitchOnlySuccess.AutoSize = true;
             checkBoxTwitchOnlySuccess.Enabled = false;
-            checkBoxTwitchOnlySuccess.Location = new System.Drawing.Point(11, 105);
+            checkBoxTwitchOnlySuccess.Location = new System.Drawing.Point(11, 90);
             checkBoxTwitchOnlySuccess.Margin = new System.Windows.Forms.Padding(5);
             checkBoxTwitchOnlySuccess.Name = "checkBoxTwitchOnlySuccess";
             checkBoxTwitchOnlySuccess.Size = new System.Drawing.Size(193, 24);
@@ -174,7 +187,7 @@
             // 
             checkBoxPostToTwitch.AutoSize = true;
             checkBoxPostToTwitch.Enabled = false;
-            checkBoxPostToTwitch.Location = new System.Drawing.Point(11, 69);
+            checkBoxPostToTwitch.Location = new System.Drawing.Point(11, 66);
             checkBoxPostToTwitch.Margin = new System.Windows.Forms.Padding(5);
             checkBoxPostToTwitch.Name = "checkBoxPostToTwitch";
             checkBoxPostToTwitch.Size = new System.Drawing.Size(214, 24);
@@ -195,7 +208,7 @@
             // 
             // buttonBossData
             // 
-            buttonBossData.Location = new System.Drawing.Point(173, 171);
+            buttonBossData.Location = new System.Drawing.Point(173, 158);
             buttonBossData.Margin = new System.Windows.Forms.Padding(5);
             buttonBossData.Name = "buttonBossData";
             buttonBossData.Size = new System.Drawing.Size(126, 35);
@@ -207,7 +220,7 @@
             // checkBoxUploadLogs
             // 
             checkBoxUploadLogs.AutoSize = true;
-            checkBoxUploadLogs.Location = new System.Drawing.Point(11, 29);
+            checkBoxUploadLogs.Location = new System.Drawing.Point(10, 30);
             checkBoxUploadLogs.Margin = new System.Windows.Forms.Padding(5);
             checkBoxUploadLogs.Name = "checkBoxUploadLogs";
             checkBoxUploadLogs.Size = new System.Drawing.Size(110, 24);
@@ -217,6 +230,7 @@
             // 
             // groupBoxArcdpsLogs
             // 
+            groupBoxArcdpsLogs.Controls.Add(checkBoxUsePolling);
             groupBoxArcdpsLogs.Controls.Add(checkBoxSaveLogsToCSV);
             groupBoxArcdpsLogs.Controls.Add(checkBoxDetailedWvW);
             groupBoxArcdpsLogs.Controls.Add(checkBoxAnonymiseReports);
@@ -232,15 +246,26 @@
             groupBoxArcdpsLogs.Margin = new System.Windows.Forms.Padding(5);
             groupBoxArcdpsLogs.Name = "groupBoxArcdpsLogs";
             groupBoxArcdpsLogs.Padding = new System.Windows.Forms.Padding(5);
-            groupBoxArcdpsLogs.Size = new System.Drawing.Size(309, 341);
+            groupBoxArcdpsLogs.Size = new System.Drawing.Size(309, 334);
             groupBoxArcdpsLogs.TabIndex = 5;
             groupBoxArcdpsLogs.TabStop = false;
             groupBoxArcdpsLogs.Text = "arcdps logs and DPS.report";
             // 
+            // checkBoxUsePolling
+            // 
+            checkBoxUsePolling.AutoSize = true;
+            checkBoxUsePolling.Location = new System.Drawing.Point(10, 125);
+            checkBoxUsePolling.Margin = new System.Windows.Forms.Padding(4);
+            checkBoxUsePolling.Name = "checkBoxUsePolling";
+            checkBoxUsePolling.Size = new System.Drawing.Size(264, 24);
+            checkBoxUsePolling.TabIndex = 4;
+            checkBoxUsePolling.Text = "use Linux compatible log detection";
+            checkBoxUsePolling.UseVisualStyleBackColor = true;
+            // 
             // checkBoxSaveLogsToCSV
             // 
             checkBoxSaveLogsToCSV.AutoSize = true;
-            checkBoxSaveLogsToCSV.Location = new System.Drawing.Point(11, 135);
+            checkBoxSaveLogsToCSV.Location = new System.Drawing.Point(10, 101);
             checkBoxSaveLogsToCSV.Margin = new System.Windows.Forms.Padding(5);
             checkBoxSaveLogsToCSV.Name = "checkBoxSaveLogsToCSV";
             checkBoxSaveLogsToCSV.Size = new System.Drawing.Size(177, 24);
@@ -251,7 +276,7 @@
             // checkBoxDetailedWvW
             // 
             checkBoxDetailedWvW.AutoSize = true;
-            checkBoxDetailedWvW.Location = new System.Drawing.Point(11, 100);
+            checkBoxDetailedWvW.Location = new System.Drawing.Point(10, 77);
             checkBoxDetailedWvW.Margin = new System.Windows.Forms.Padding(5);
             checkBoxDetailedWvW.Name = "checkBoxDetailedWvW";
             checkBoxDetailedWvW.Size = new System.Drawing.Size(176, 24);
@@ -262,7 +287,7 @@
             // checkBoxAnonymiseReports
             // 
             checkBoxAnonymiseReports.AutoSize = true;
-            checkBoxAnonymiseReports.Location = new System.Drawing.Point(11, 65);
+            checkBoxAnonymiseReports.Location = new System.Drawing.Point(10, 53);
             checkBoxAnonymiseReports.Margin = new System.Windows.Forms.Padding(5);
             checkBoxAnonymiseReports.Name = "checkBoxAnonymiseReports";
             checkBoxAnonymiseReports.Size = new System.Drawing.Size(153, 24);
@@ -272,7 +297,7 @@
             // 
             // buttonCopyApplicationSession
             // 
-            buttonCopyApplicationSession.Location = new System.Drawing.Point(161, 215);
+            buttonCopyApplicationSession.Location = new System.Drawing.Point(161, 202);
             buttonCopyApplicationSession.Margin = new System.Windows.Forms.Padding(5);
             buttonCopyApplicationSession.Name = "buttonCopyApplicationSession";
             buttonCopyApplicationSession.Size = new System.Drawing.Size(138, 35);
@@ -283,7 +308,7 @@
             // 
             // buttonSession
             // 
-            buttonSession.Location = new System.Drawing.Point(8, 171);
+            buttonSession.Location = new System.Drawing.Point(8, 158);
             buttonSession.Margin = new System.Windows.Forms.Padding(5);
             buttonSession.Name = "buttonSession";
             buttonSession.Size = new System.Drawing.Size(157, 35);
@@ -295,7 +320,7 @@
             // buttonOpenLogs
             // 
             buttonOpenLogs.Enabled = false;
-            buttonOpenLogs.Location = new System.Drawing.Point(213, 260);
+            buttonOpenLogs.Location = new System.Drawing.Point(213, 247);
             buttonOpenLogs.Margin = new System.Windows.Forms.Padding(5);
             buttonOpenLogs.Name = "buttonOpenLogs";
             buttonOpenLogs.Size = new System.Drawing.Size(86, 35);
@@ -306,7 +331,7 @@
             // 
             // buttonDPSReportServer
             // 
-            buttonDPSReportServer.Location = new System.Drawing.Point(8, 215);
+            buttonDPSReportServer.Location = new System.Drawing.Point(8, 202);
             buttonDPSReportServer.Margin = new System.Windows.Forms.Padding(5);
             buttonDPSReportServer.Name = "buttonDPSReportServer";
             buttonDPSReportServer.Size = new System.Drawing.Size(145, 35);
@@ -317,7 +342,7 @@
             // 
             // labelLocationInfo
             // 
-            labelLocationInfo.Location = new System.Drawing.Point(8, 300);
+            labelLocationInfo.Location = new System.Drawing.Point(8, 287);
             labelLocationInfo.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             labelLocationInfo.Name = "labelLocationInfo";
             labelLocationInfo.Size = new System.Drawing.Size(291, 35);
@@ -326,7 +351,7 @@
             // 
             // buttonLogsLocation
             // 
-            buttonLogsLocation.Location = new System.Drawing.Point(8, 260);
+            buttonLogsLocation.Location = new System.Drawing.Point(8, 247);
             buttonLogsLocation.Margin = new System.Windows.Forms.Padding(5);
             buttonLogsLocation.Name = "buttonLogsLocation";
             buttonLogsLocation.Size = new System.Drawing.Size(197, 35);
@@ -636,7 +661,7 @@
             richTextBoxMainConsole.BackColor = System.Drawing.Color.White;
             richTextBoxMainConsole.BorderStyle = System.Windows.Forms.BorderStyle.None;
             richTextBoxMainConsole.Dock = System.Windows.Forms.DockStyle.Fill;
-            richTextBoxMainConsole.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            richTextBoxMainConsole.Font = new System.Drawing.Font("Segoe UI", 12F);
             richTextBoxMainConsole.Location = new System.Drawing.Point(5, 5);
             richTextBoxMainConsole.Margin = new System.Windows.Forms.Padding(5);
             richTextBoxMainConsole.Name = "richTextBoxMainConsole";
@@ -795,6 +820,8 @@
         private System.Windows.Forms.TabPage tabPageMainSettings;
         private System.Windows.Forms.TabPage tabPageOtherSettings;
         private System.Windows.Forms.Timer timerFailedLogsReupload;
+        private System.Windows.Forms.CheckBox checkBoxUsePolling;
+        private System.Windows.Forms.CheckBox checkBoxOnlyWhenStreamSoftwareRunning;
     }
 }
 

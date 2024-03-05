@@ -18,7 +18,7 @@ namespace PlenBotLogUploader
         #region definitions
         // properties
         private static readonly string PingJsonFileLocation = $@"{ApplicationSettings.LocalDir}\remote_pings.json";
-        internal IDictionary<int, PingConfiguration> AllPings { get; set; }
+        internal IDictionary<int, PingConfiguration> AllPings { get; init; }
 
         // fields
         private readonly FormMain mainLink;
@@ -40,7 +40,7 @@ namespace PlenBotLogUploader
                 {
                     Name = ping.Key.ToString(),
                     Text = ping.Value.Name,
-                    Checked = ping.Value.Active
+                    Checked = ping.Value.Active,
                 });
             }
         }

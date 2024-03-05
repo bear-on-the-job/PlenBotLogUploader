@@ -280,7 +280,7 @@ namespace PlenBotLogUploader
                 {
                     Name = webHook.Key.ToString(),
                     Text = webHook.Value.Name,
-                    Checked = webHook.Value.Active
+                    Checked = webHook.Value.Active,
                 });
             }
         }
@@ -297,7 +297,7 @@ namespace PlenBotLogUploader
             if (reportJSON.Encounter.BossId.Equals(1)) // WvW
             {
                 var extraJSONFightName = (reportJSON.ExtraJson is null) ? reportJSON.Encounter.Boss : reportJSON.ExtraJson.FightName;
-                var extraJSON = (reportJSON.ExtraJson is null) ? "" : $"Recorded by: {reportJSON.ExtraJson.RecordedBy}\nDuration: {reportJSON.ExtraJson.Duration}\nElite Insights version: {reportJSON.ExtraJson.EliteInsightsVersion}";
+                var extraJSON = (reportJSON.ExtraJson is null) ? "" : $"Recorded by: {reportJSON.ExtraJson.RecordedByAccountName}\nDuration: {reportJSON.ExtraJson.Duration}\nElite Insights version: {reportJSON.ExtraJson.EliteInsightsVersion}";
                 var icon = "";
                 var bossData = Bosses.GetBossDataFromId(1);
                 if (bossData is not null)
@@ -307,7 +307,7 @@ namespace PlenBotLogUploader
                 const int colour = 16752238;
                 var discordContentEmbedThumbnail = new DiscordApiJsonContentEmbedThumbnail()
                 {
-                    Url = icon
+                    Url = icon,
                 };
                 var timestampDateTime = DateTime.UtcNow;
                 if (reportJSON.ExtraJson is not null)
@@ -322,7 +322,7 @@ namespace PlenBotLogUploader
                     Description = $"{extraJSON}\narcdps version: {reportJSON.Evtc.Type}{reportJSON.Evtc.Version}",
                     Colour = colour,
                     TimeStamp = timestamp,
-                    Thumbnail = discordContentEmbedThumbnail
+                    Thumbnail = discordContentEmbedThumbnail,
                 };
 
                 foreach (var key in allWebhooks.Keys)
@@ -338,6 +338,11 @@ namespace PlenBotLogUploader
                     var ccField = new DiscordApiJsonContentEmbedField();
 
                     // fields
+                    var discordContentEmbedSquadAndPlayers = new List<DiscordApiJsonContentEmbedField>();
+                    var discordContentEmbedSquad = new List<DiscordApiJsonContentEmbedField>();
+                    var discordContentEmbedPlayers = new List<DiscordApiJsonContentEmbedField>();
+                    var discordContentEmbedNone = new List<DiscordApiJsonContentEmbedField>();
+
                     if (reportJSON.ExtraJson is not null)
                     {
                         // squad summary
@@ -538,9 +543,14 @@ namespace PlenBotLogUploader
                         boonStripsField.Value = $"```{boonStripsSummary.Render()}```";
 
                         // healing summary
+
+                        //if ((reportJSON?.ExtraJson?.Players?[0]?.StatsHealing ?? null) is not null) { }
+
                         var healingStats = reportJSON.ExtraJson.Players
-                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtHealingStats?.OutgoingHealingAllies?.Any() == true))
-                            .OrderByDescending(x => x.ExtHealingStats.OutgoingHealingAllies.Sum(p => p.FirstOrDefault()?.Healing ?? 0))
+                            //.Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtHealingStats?.OutgoingHealingAllies?.Any() == true))
+                            //.OrderByDescending(x => x.ExtHealingStats.OutgoingHealingAllies.Sum(p => p.FirstOrDefault()?.Healing ?? 0))
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && ((x.StatsHealing?.TotalHealingOnSquad ?? 0) > 0))
+                            .OrderByDescending(x => x.StatsHealing?.TotalHealingOnSquad ?? 0)
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var healingSummary = new TextTable(3, tableStyle, tableBorders);
@@ -553,23 +563,29 @@ namespace PlenBotLogUploader
                         rank = 0;
                         foreach (var player in healingStats)
                         {
-                            var healing = player.ExtHealingStats.OutgoingHealingAllies.Sum(p => p.FirstOrDefault()?.Healing ?? 0);
+                            var healing = player.StatsHealing?.TotalHealingOnSquad ?? 0;
 
                             if (healing < 1) break;
 
                             rank++;
                             healingSummary.AddCell($"{rank}", tableCellCenterAlign);
                             healingSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
-                            healingSummary.AddCell($"{player.ExtHealingStats.OutgoingHealingAllies.Aggregate(0, (sum, next) => sum + (next.FirstOrDefault()?.Healing ?? 0), sum => sum)}", tableCellRightAlign);
+                            //healingSummary.AddCell($"{player.ExtHealingStats.OutgoingHealingAllies.Aggregate(0, (sum, next) => sum + (next.FirstOrDefault()?.Healing ?? 0), sum => sum)}", tableCellRightAlign);
+                            healingSummary.AddCell($"{healing.ParseAsK()}", tableCellRightAlign);
                         }
 
                         healingField.Name = "Healing summary:";
                         healingField.Value = $"```{healingSummary.Render()}```";
 
                         // barrier summary
+
+                        // if ((reportJSON?.ExtraJson?.Players?[0]?.StatsBarrier ?? null) is not null) { }
+
                         var barrierStats = reportJSON.ExtraJson.Players
-                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtBarrierStats?.OutgoingBarrierAllies?.Any() == true))
-                            .OrderByDescending(x => x.ExtBarrierStats.OutgoingBarrierAllies.Sum(x => x.FirstOrDefault()?.Barrier ?? 0))
+                            //.Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtBarrierStats?.OutgoingBarrierAllies?.Any() == true))
+                            //.OrderByDescending(x => x.ExtBarrierStats.OutgoingBarrierAllies.Sum(x => x.FirstOrDefault()?.Barrier ?? 0))
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && ((x.StatsBarrier?.TotalBarrierOnSquad ?? 0) > 0))
+                            .OrderByDescending(x => x.StatsBarrier?.TotalBarrierOnSquad ?? 0)
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var barrierSummary = new TextTable(3, tableStyle, tableBorders);
@@ -582,13 +598,13 @@ namespace PlenBotLogUploader
                         rank = 0;
                         foreach (var player in barrierStats)
                         {   
-                            var barrier = player.ExtBarrierStats.OutgoingBarrierAllies.Sum(x => x.FirstOrDefault()?.Barrier ?? 0);
+                            var barrier = player.StatsBarrier?.TotalBarrierOnSquad ?? 0;
 
                             if (webhook.AdjustBarrier)
                             {
-                                var totalBarrier = reportJSON.ExtraJson.Players.Sum(p => p.ExtBarrierStats.OutgoingBarrierAllies.Sum(x => x.FirstOrDefault()?.Barrier ?? 0));
+                                var totalBarrier = reportJSON.ExtraJson.Players.Sum(p => p.StatsBarrier?.TotalBarrierOnSquad ?? 0);
                                 var absorbedBarrier = reportJSON.ExtraJson.Players.Sum(p => p.Defenses.FirstOrDefault()?.DamageBarrier ?? 0);
-                                barrier = (int)((double)barrier * ((double)absorbedBarrier / (double)totalBarrier));
+                                barrier = (long)((double)barrier * ((double)absorbedBarrier / (double)totalBarrier));
                             }
 
                             if (barrier < 1) break;
@@ -596,7 +612,7 @@ namespace PlenBotLogUploader
                             rank++;
                             barrierSummary.AddCell($"{rank}", tableCellCenterAlign);
                             barrierSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
-                            barrierSummary.AddCell($"{barrier}", tableCellRightAlign);
+                            barrierSummary.AddCell($"{barrier.ParseAsK()}", tableCellRightAlign);
                         }
 
                         if (webhook.AdjustBarrier)
@@ -707,50 +723,128 @@ namespace PlenBotLogUploader
                                 });
                             }
                         }
-                    }
 
-                    if (!webhook.Active
-                        || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnSuccessOnly) && !(reportJSON.Encounter.Success ?? false))
-                        || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnFailOnly) && (reportJSON.Encounter.Success ?? false))
-                        || (webhook.BossesDisable.Contains(reportJSON.Encounter.BossId))
-                        || (!webhook.Team.IsSatisfied(players)))
-                    {
-                        continue;
-                    }
-                    try
-                    {
                         // BEAR
-                        if (webhook.IncludeDamageSummary) discordContentEmbed.Fields.Add(damageField);
-                        if (webhook.IncludeHealingSummary) discordContentEmbed.Fields.Add(healingField);
-                        if (webhook.IncludeBarrierSummary) discordContentEmbed.Fields.Add(barrierField);
-                        if (webhook.IncludeCleansingSummary) discordContentEmbed.Fields.Add(cleansesField);
-                        if (webhook.IncludeStripSummary) discordContentEmbed.Fields.Add(boonStripsField);
-                        if (webhook.IncludeCCSummary) discordContentEmbed.Fields.Add(ccField);
+                        // add the fields
+                        discordContentEmbedSquadAndPlayers.AddRange(squadField, enemyField);
+                        discordContentEmbedSquad.AddRange(squadField, enemyField);
 
-                        // post to discord
-                        var discordContentWvW = new DiscordApiJsonContent()
+                        if (webhook.ShowOpponentIcons)
                         {
-                            Embeds = new List<DiscordApiJsonContentEmbed>() { discordContentEmbed }
-                        };
-                        var jsonContentWvW = JsonConvert.SerializeObject(discordContentWvW);
+                            if (enemyClasses.Count > 0)
+                            {
+                                var content = new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = string.Join("    ", enemyClasses.Take(4)),
+                                    Value = "",
+                                    Inline = true
+                                };
 
-                        foreach (var (className, emojiCode) in webhook.ClassEmojis)
-                        {
-                            jsonContentWvW = jsonContentWvW.Replace($"{{{className}}}", emojiCode);
+                                discordContentEmbedSquadAndPlayers.Add(content);
+                                discordContentEmbedPlayers.Add(content);
+                            }
+                            if (enemyClasses.Count > 4)
+                            {
+                                var content = new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = string.Join("    ", enemyClasses.Skip(4).Take(4)),
+                                    Value = "",
+                                    Inline = true
+                                };
+
+                                discordContentEmbedSquadAndPlayers.Add(content);
+                                discordContentEmbedPlayers.Add(content);
+                            }
+                            if (enemyClasses.Count > 8)
+                            {
+                                var content1 = new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = "",
+                                    Value = "",
+                                    Inline = false
+                                };
+
+                                var content2 = new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = $"  {string.Join("     ", enemyClasses.Skip(8).Take(4))}",
+                                    Value = "",
+                                    Inline = true
+                                };
+
+                                discordContentEmbedSquadAndPlayers.Add(content1);
+                                discordContentEmbedSquadAndPlayers.Add(content2);
+                                discordContentEmbedPlayers.Add(content1);
+                                discordContentEmbedPlayers.Add(content2);
+                            }
+                            if (enemyClasses.Count > 12)
+                            {
+                                var content = new DiscordApiJsonContentEmbedField
+                                {
+                                    Name = string.Join("    ", enemyClasses.Skip(12).Take(4)),
+                                    Value = "",
+                                    Inline = true
+                                };
+
+                                discordContentEmbedSquadAndPlayers.Add(content);
+                                discordContentEmbedPlayers.Add(content);
+                            }
                         }
-                        var uri = new Uri(webhook.Url);
-                        using var content = new StringContent(jsonContentWvW, Encoding.UTF8, "application/json");
-                        using var response = await mainLink.HttpClientController.PostAsync(webhook.Url, content);
+
+                        if (webhook.IncludeDamageSummary)
+                        {
+                            //discordContentEmbed.Fields.Add(damageField);
+                            discordContentEmbedSquadAndPlayers.Add(damageField);
+                            discordContentEmbedPlayers.Add(damageField);
+                        }
+                        if (webhook.IncludeHealingSummary)
+                        {
+                            //discordContentEmbed.Fields.Add(healingField);
+                            discordContentEmbedSquadAndPlayers.Add(healingField);
+                            discordContentEmbedPlayers.Add(healingField);
+                        }
+                        if (webhook.IncludeBarrierSummary)
+                        {
+                            //discordContentEmbed.Fields.Add(barrierField);
+                            discordContentEmbedSquadAndPlayers.Add(barrierField);
+                            discordContentEmbedPlayers.Add(barrierField);
+                        }
+                        if (webhook.IncludeCleansingSummary)
+                        {
+                            //discordContentEmbed.Fields.Add(cleansesField);
+                            discordContentEmbedSquadAndPlayers.Add(cleansesField);
+                            discordContentEmbedPlayers.Add(cleansesField);
+                        }
+                        if (webhook.IncludeStripSummary)
+                        {
+                            //discordContentEmbed.Fields.Add(boonStripsField);
+                            discordContentEmbedSquadAndPlayers.Add(boonStripsField);
+                            discordContentEmbedPlayers.Add(boonStripsField);
+                        }
+                        if (webhook.IncludeCCSummary)
+                        {
+                            //discordContentEmbed.Fields.Add(ccField);
+                            discordContentEmbedSquadAndPlayers.Add(ccField);
+                            discordContentEmbedPlayers.Add(ccField);
+                        }
                     }
-                    catch (UriFormatException ex)
+
+                    // post to discord
+                    var discordContentWvW = new DiscordApiJsonContent()
                     {
-                        mainLink.AddToText($">:> An error has occured while processing URL for the webhook \"{webhook.Name}\": {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        mainLink.AddToText($">:> An error has occured while processing the webhook \"{webhook.Name}\": {ex.Message}");
-                    }
+                        Embeds = [discordContentEmbed]
+                    };
+                    discordContentWvW.Embeds[0].Fields = discordContentEmbedSquadAndPlayers;
+                    var jsonContentWvWSquadAndPlayers = JsonConvert.SerializeObject(discordContentWvW);
+                    discordContentWvW.Embeds[0].Fields = discordContentEmbedSquad;
+                    var jsonContentWvWSquad = JsonConvert.SerializeObject(discordContentWvW);
+                    discordContentWvW.Embeds[0].Fields = discordContentEmbedPlayers;
+                    var jsonContentWvWPlayers = JsonConvert.SerializeObject(discordContentWvW);
+                    discordContentWvW.Embeds[0].Fields = discordContentEmbedNone;
+                    var jsonContentWvWNone = JsonConvert.SerializeObject(discordContentWvW);
+
+                    await SendLogViaWebhooks(reportJSON.Encounter.Success ?? false, reportJSON.Encounter.BossId, bossData, players, jsonContentWvWNone, jsonContentWvWSquad, jsonContentWvWPlayers, jsonContentWvWSquadAndPlayers);
                 }
+
                 if (allWebhooks.Count > 0)
                 {
                     mainLink.AddToText(">:> All active webhooks executed.");
@@ -761,7 +855,8 @@ namespace PlenBotLogUploader
             {
                 var bossName = $"{reportJSON.Encounter.Boss}{(reportJSON.ChallengeMode ? " CM" : "")}";
                 var successString = (reportJSON.Encounter.Success ?? false) ? ":white_check_mark:" : "❌";
-                var extraJSON = (reportJSON.ExtraJson is null) ? "" : $"Recorded by: {reportJSON.ExtraJson.RecordedBy}\nDuration: {reportJSON.ExtraJson.Duration}\nElite Insights version: {reportJSON.ExtraJson.EliteInsightsVersion}\n";
+                var lastTarget = (reportJSON?.ExtraJson?.PossiblyLastTarget is not null) ? $"\n{reportJSON.ExtraJson.PossiblyLastTarget.Name} ({Math.Round(100 - reportJSON.ExtraJson.PossiblyLastTarget.HealthPercentBurned, 2)}%)" : "";
+                var extraJSON = (reportJSON.ExtraJson is null) ? "" : $"Recorded by: {reportJSON.ExtraJson.RecordedByAccountName}\nDuration: {reportJSON.ExtraJson.Duration}{lastTarget}\nElite Insights version: {reportJSON.ExtraJson.EliteInsightsVersion}\n";
                 var icon = "";
                 var bossData = Bosses.GetBossDataFromId(reportJSON.Encounter.BossId);
                 if (bossData is not null)
@@ -772,7 +867,7 @@ namespace PlenBotLogUploader
                 var colour = (reportJSON.Encounter.Success ?? false) ? 32768 : 16711680;
                 var discordContentEmbedThumbnail = new DiscordApiJsonContentEmbedThumbnail()
                 {
-                    Url = icon
+                    Url = icon,
                 };
                 var timestampDateTime = DateTime.UtcNow;
                 if (reportJSON.ExtraJson is not null)
@@ -787,24 +882,14 @@ namespace PlenBotLogUploader
                     Description = $"{extraJSON}Result: {successString}\narcdps version: {reportJSON.Evtc.Type}{reportJSON.Evtc.Version}",
                     Colour = colour,
                     TimeStamp = timestamp,
-                    Thumbnail = discordContentEmbedThumbnail
+                    Thumbnail = discordContentEmbedThumbnail,
                 };
-                var discordContentWithoutPlayers = new DiscordApiJsonContent()
-                {
-                    Embeds = new List<DiscordApiJsonContentEmbed>() { discordContentEmbed }
-                };
-                var discordContentEmbedForPlayers = new DiscordApiJsonContentEmbed()
-                {
-                    Title = bossName,
-                    Url = reportJSON.ConfigAwarePermalink,
-                    Description = $"{extraJSON}Result: {successString}\narcdps version: {reportJSON.Evtc.Type}{reportJSON.Evtc.Version}",
-                    Colour = colour,
-                    TimeStamp = timestamp,
-                    Thumbnail = discordContentEmbedThumbnail
-                };
+                var discordContentEmbedSquadAndPlayers = new List<DiscordApiJsonContentEmbedField>();
+                var discordContentEmbedSquad = new List<DiscordApiJsonContentEmbedField>();
+                var discordContentEmbedPlayers = new List<DiscordApiJsonContentEmbedField>();
+                var discordContentEmbedNone = new List<DiscordApiJsonContentEmbedField>();
                 if (reportJSON.Players.Values.Count <= 10)
                 {
-                    var fields = new List<DiscordApiJsonContentEmbedField>();
                     if (reportJSON.ExtraJson is null)
                     {
                         // player list
@@ -818,11 +903,13 @@ namespace PlenBotLogUploader
                             playerNames.AddCell($"{player.CharacterName}");
                             playerNames.AddCell($"{player.DisplayName}");
                         }
-                        fields.Add(new DiscordApiJsonContentEmbedField()
+                        var squadEmbedField = new DiscordApiJsonContentEmbedField()
                         {
                             Name = "Players in squad/group:",
-                            Value = $"```{playerNames.Render()}```"
-                        });
+                            Value = $"```{playerNames.Render()}```",
+                        };
+                        discordContentEmbedSquadAndPlayers.Add(squadEmbedField);
+                        discordContentEmbedSquad.Add(squadEmbedField);
                     }
                     else
                     {
@@ -837,11 +924,13 @@ namespace PlenBotLogUploader
                             playerNames.AddCell($"{player.Name}");
                             playerNames.AddCell($"{player.Account}");
                         }
-                        fields.Add(new DiscordApiJsonContentEmbedField()
+                        var squadEmbedField = new DiscordApiJsonContentEmbedField()
                         {
                             Name = "Players in squad/group:",
-                            Value = $"```{playerNames.Render()}```"
-                        });
+                            Value = $"```{playerNames.Render()}```",
+                        };
+                        discordContentEmbedSquadAndPlayers.Add(squadEmbedField);
+                        discordContentEmbedSquad.Add(squadEmbedField);
                         var numberOfRealTargers = reportJSON.ExtraJson.Targets
                             .Count(x => !x.IsFake);
                         // damage summary
@@ -851,7 +940,7 @@ namespace PlenBotLogUploader
                             .Select(x => new
                             {
                                 Player = x,
-                                DPS = (numberOfRealTargers > 0) ? targetDps[x] : x.DpsAll[0].Dps
+                                DPS = (numberOfRealTargers > 0) ? targetDps[x] : x.DpsAll[0].Dps,
                             })
                             .OrderByDescending(x => x.DPS)
                             .Take(10)
@@ -877,57 +966,76 @@ namespace PlenBotLogUploader
                             .Select(x => x.DPS)
                             .Sum();
                         dpsTargetSummary.AddCell($"{totalDPS.ParseAsK()}", tableCellRightAlign);
-                        fields.Add(new DiscordApiJsonContentEmbedField()
+                        var playersEmbedField = new DiscordApiJsonContentEmbedField()
                         {
                             Name = "DPS target summary:",
-                            Value = $"```{dpsTargetSummary.Render()}```"
-                        });
+                            Value = $"```{dpsTargetSummary.Render()}```",
+                        };
+                        discordContentEmbedSquadAndPlayers.Add(playersEmbedField);
+                        discordContentEmbedPlayers.Add(playersEmbedField);
                     }
-                    discordContentEmbedForPlayers.Fields = fields;
                 }
-                var discordContentWithPlayers = new DiscordApiJsonContent()
+                var discordContent = new DiscordApiJsonContent()
                 {
-                    Embeds = new List<DiscordApiJsonContentEmbed>() { discordContentEmbedForPlayers }
+                    Embeds = [discordContentEmbed],
                 };
-                var jsonContentWithoutPlayers = JsonConvert.SerializeObject(discordContentWithoutPlayers);
-                var jsonContentWithPlayers = JsonConvert.SerializeObject(discordContentWithPlayers);
-                foreach (var key in allWebhooks.Keys)
-                {
-                    var webhook = allWebhooks[key];
-                    if (!webhook.Active
-                        || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnSuccessOnly) && !(reportJSON.Encounter.Success ?? false))
-                        || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnFailOnly) && (reportJSON.Encounter.Success ?? false))
-                        || (webhook.BossesDisable.Contains(reportJSON.Encounter.BossId))
-                        || (!webhook.AllowUnknownBossIds && (bossData is null))
-                        || (!webhook.Team.IsSatisfied(players)))
-                    {
-                        continue;
-                    }
-                    try
-                    {
-                        if (webhook.ShowPlayers)
-                        {
-                            using var content = new StringContent(jsonContentWithPlayers, Encoding.UTF8, "application/json");
-                            await mainLink.HttpClientController.PostAsync(webhook.Url, content);
-                        }
-                        else
-                        {
-                            using var content = new StringContent(jsonContentWithoutPlayers, Encoding.UTF8, "application/json");
-                            await mainLink.HttpClientController.PostAsync(webhook.Url, content);
-                        }
-                    }
-                    catch (UriFormatException ex)
-                    {
-                        mainLink.AddToText($">:> An error has occured while processing URL for the webhook \"{webhook.Name}\": {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        mainLink.AddToText($">:> An error has occured while processing the webhook \"{webhook.Name}\": {ex.Message}");
-                    }
-                }
+                discordContent.Embeds[0].Fields = discordContentEmbedSquadAndPlayers;
+                var jsonContentSquadAndPlayers = JsonConvert.SerializeObject(discordContent);
+                discordContent.Embeds[0].Fields = discordContentEmbedSquad;
+                var jsonContentSquad = JsonConvert.SerializeObject(discordContent);
+                discordContent.Embeds[0].Fields = discordContentEmbedPlayers;
+                var jsonContentPlayers = JsonConvert.SerializeObject(discordContent);
+                discordContent.Embeds[0].Fields = discordContentEmbedNone;
+                var jsonContentNone = JsonConvert.SerializeObject(discordContent);
+
+                await SendLogViaWebhooks(reportJSON.Encounter.Success ?? false, reportJSON.Encounter.BossId, bossData, players, jsonContentNone, jsonContentSquad, jsonContentPlayers, jsonContentSquadAndPlayers);
+
                 if (allWebhooks.Count > 0)
                 {
                     mainLink.AddToText(">:> All active webhooks executed.");
+                }
+            }
+        }
+
+        internal async Task SendLogViaWebhooks(bool success, int bossId, BossData bossData, List<LogPlayer> players, string jsonContentNone, string jsonContentSquad, string jsonContentPlayers, string jsonContentSquadAndPlayers)
+        {
+            foreach (var key in allWebhooks.Keys)
+            {
+                var webhook = allWebhooks[key];
+                if (!webhook.Active
+                    || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnSuccessOnly) && !success)
+                    || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnFailOnly) && success)
+                    || webhook.BossesDisable.Contains(bossId)
+                    || (!webhook.AllowUnknownBossIds && (bossData is null))
+                    || (!webhook.Team.IsSatisfied(players)))
+                {
+                    continue;
+                }
+                try
+                {
+                    var jsonToSend = webhook.SummaryType switch
+                    {
+                        DiscordWebhookDataLogSummaryType.None => jsonContentNone,
+                        DiscordWebhookDataLogSummaryType.SquadOnly => jsonContentSquad,
+                        DiscordWebhookDataLogSummaryType.PlayersOnly => jsonContentPlayers,
+                        _ => jsonContentSquadAndPlayers,
+                    };
+
+                    foreach (var (className, emojiCode) in webhook.ClassEmojis)
+                    {
+                        jsonToSend = jsonToSend.Replace($"{{{className}}}", emojiCode);
+                    }
+
+                    using var content = new StringContent(jsonToSend, Encoding.UTF8, "application/json");
+                    using var response = await mainLink.HttpClientController.PostAsync(webhook.Url, content);
+                }
+                catch (UriFormatException ex)
+                {
+                    mainLink.AddToText($">:> An error has occured while processing URL for the webhook \"{webhook.Name}\": {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    mainLink.AddToText($">:> An error has occured while processing the webhook \"{webhook.Name}\": {ex.Message}");
                 }
             }
         }
@@ -965,17 +1073,17 @@ namespace PlenBotLogUploader
             var jsonContentSuccessFailure = JsonConvert.SerializeObject(new DiscordApiJsonContent()
             {
                 Content = contentText,
-                Embeds = discordEmbeds.SuccessFailure
+                Embeds = discordEmbeds.SuccessFailure,
             });
             var jsonContentSuccess = JsonConvert.SerializeObject(new DiscordApiJsonContent()
             {
                 Content = contentText,
-                Embeds = discordEmbeds.Success
+                Embeds = discordEmbeds.Success,
             });
             var jsonContentFailure = JsonConvert.SerializeObject(new DiscordApiJsonContent()
             {
                 Content = contentText,
-                Embeds = discordEmbeds.Failure
+                Embeds = discordEmbeds.Failure,
             });
             try
             {

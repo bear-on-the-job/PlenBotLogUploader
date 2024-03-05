@@ -2,9 +2,12 @@
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal sealed class OutgoingHealing
+    internal class OutgoingHealing
     {
         [JsonProperty("healing")]
-        internal int Healing { get; set; }
+        internal long Healing { get; set; }
+
+        [JsonProperty("hps")]
+        internal long HealingPerSecond { get; set; }
     }
 }

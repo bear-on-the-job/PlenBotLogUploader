@@ -22,7 +22,7 @@ namespace PlenBotLogUploader.AppSettings
         };
 
         [JsonProperty("dpsReportUserTokens")]
-        internal List<ApplicationSettingsUploadUserToken> DpsReportUserTokens { get; set; } = new();
+        internal List<ApplicationSettingsUploadUserToken> DpsReportUserTokens { get; set; } = [];
 
         [JsonProperty("enabled")]
         internal bool Enabled { get; set; } = true;
@@ -32,6 +32,9 @@ namespace PlenBotLogUploader.AppSettings
 
         [JsonProperty("postLogsTwitchOnlySuccess")]
         internal bool PostLogsToTwitchOnlySuccess { get; set; } = true;
+
+        [JsonProperty("postLogsToTwitchOnlyWithStreamingSoftware")]
+        internal bool PostLogsToTwitchOnlyWithStreamingSoftware { get; set; } = true;
 
         [JsonProperty("saveToCSVEnabled")]
         internal bool SaveToCsvEnabled { get; set; } = true;

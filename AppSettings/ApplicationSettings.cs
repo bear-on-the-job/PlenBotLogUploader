@@ -9,7 +9,7 @@ namespace PlenBotLogUploader.AppSettings
     internal sealed class ApplicationSettings
     {
         #region application version
-        internal static int Version => 85;
+        internal static int Version => 87;
         #endregion
 
         #region load & save functionality
@@ -76,7 +76,7 @@ namespace PlenBotLogUploader.AppSettings
         internal bool FirstTimeMinimised { get; set; } = false;
 
         [JsonProperty("gw2APIKeys")]
-        internal List<ApplicationSettingsGw2Api> Gw2Apis { get; set; } = new List<ApplicationSettingsGw2Api>();
+        internal List<ApplicationSettingsGw2Api> Gw2Apis { get; set; } = [];
 
         [JsonProperty("gw2Bot")]
         internal ApplicationSettingsGw2Bot Gw2Bot { get; set; } = new ApplicationSettingsGw2Bot();
@@ -86,6 +86,9 @@ namespace PlenBotLogUploader.AppSettings
 
         [JsonProperty("logsLocation")]
         internal string LogsLocation { get; set; } = "";
+
+        [JsonProperty("usePollingForLogs")]
+        internal bool UsePollingForLogs { get; set; } = false;
 
         [JsonProperty("mainFormSize")]
         internal System.Drawing.Size MainFormSize { get; set; } = new System.Drawing.Size(649, 784);

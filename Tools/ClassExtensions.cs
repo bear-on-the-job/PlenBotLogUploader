@@ -36,7 +36,25 @@ namespace PlenBotLogUploader.Tools
 
         internal static string ParseAsK(this int number) => ParseDoubleAsK(number);
 
+        internal static string ParseAsK(this long number) => ParseDoubleAsK(number);
+
         internal static ReadOnlySpan<T> AsSpan<T>(this List<T> list) => CollectionsMarshal.AsSpan(list);
+
+        internal static void AddRange<T>(this List<T> list, params T[] items)
+        {
+            if (list == null)
+            {
+                return;
+            }
+            foreach (var item in items.AsSpan())
+            {
+                if (item is null)
+                {
+                    continue;
+                }
+                list.Add(item);
+            }
+        }
 
         internal static async Task<GitHubReleaseLatest> GetGitHubLatestReleaseAsync(this HttpClientController controller, string repository)
         {

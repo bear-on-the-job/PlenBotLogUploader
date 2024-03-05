@@ -12,12 +12,12 @@ namespace PlenBotLogUploader.DiscordApi
         /// footer text
         /// </summary>
         [JsonProperty("text")]
-        internal string Text { get; set; } = $"PlenBot Log Uploader r.{ApplicationSettings.Version}";
+        internal string Text { get; set; } = $"PlenBot Log Uploader r.{ApplicationSettings.Version}.BEAR";
 
         /// <summary>
         /// url of the footer icon (only supports http(s) and attachments)
         /// </summary>
         [JsonProperty("icon_url")]
-        internal string IconUrl { get; set; } = "https://plenbot.net/uploader/img/favicon.png";
+        internal string IconUrl { get; set; } = "https://bear-on-the-job.github.io/bear.avatar.circle.png";
     }
 }
