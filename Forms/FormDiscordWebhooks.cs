@@ -1,15 +1,12 @@
-﻿using Hardstuck.GuildWars2.BuildCodes.V2;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using PlenBotLogUploader.AppSettings;
 using PlenBotLogUploader.DiscordApi;
 using PlenBotLogUploader.DpsReport;
-using PlenBotLogUploader.DpsReport.ExtraJson;
 using PlenBotLogUploader.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -19,8 +16,15 @@ namespace PlenBotLogUploader
 {
     public partial class FormDiscordWebhooks : Form
     {
-        private List<(List<string> professions, List<(int id, double coefficient)> skills)> mapping = new List<(List<string>, List<(int, double)>)>
+        private List<(List<string> category, List<(int id, double coefficient)> skills)> mapping = new List<(List<string>, List<(int, double)>)>
         {
+            (
+                new List<string> { "Relics" },
+                new List<(int, double)>
+                {
+                    (70491, 1), //Relic of the wizard's tower
+                }
+            ),
             (
                 new List<string> { "Tempest", "Weaver", "Catalyst", "Elementalist"},
                 new List<(int, double)>
@@ -48,6 +52,8 @@ namespace PlenBotLogUploader
                     (44998, 1), //Polaric Leap
                     (42321, 1), //Pile Driver
                     (5721,  1), //Deep Freeze
+                    (71966,  1), //Dazing Discharge
+                    (46140,  1), //Katabatic Wind
                 }
             ),
             (
@@ -58,8 +64,7 @@ namespace PlenBotLogUploader
                     (63230, 1), //Well of Silence
                     (30568, 1), //Distracting Daggers
                     (29516, 1), //Impact Strike
-                    (1131,  1), //Mace Head Crack
-                    (50484, 1), //Malicious Tactical Strike
+                    (1131,  1), //Mace Head Crack                    
                     (63275, 1), //Shadowfall
                     (63220, 1), //Dawn's Repose
                     (1141,  1), //Skull Fear
@@ -69,6 +74,8 @@ namespace PlenBotLogUploader
                     (56880, 1), //Pitfall
                     (30077, 1), //Uppercut
                     (46335, 2), //Shadow Gust
+                    (13114, 1), //Tactical Strike
+                    (50484, 1), //Malicious Tactical Strike
                 }
             ),
             (
@@ -102,6 +109,8 @@ namespace PlenBotLogUploader
                     (14388, 1), //Stomp
                     (14409, 1), //Fear Me
                     (41919, 1), //Imminent Threat
+                    (72026, 1), //Snap Pull
+                    (29679, 1), //Skull Grinder
                 }
             ),
             (
@@ -116,6 +125,7 @@ namespace PlenBotLogUploader
                     (31248, 1), //Blast Gyro
                     (5868,  1), //Supply Crate
                     (63234, 1), //Rocket Fist Prototype
+                    (71888, 1), //Essence of Borrowed Time
                     (30713, 1/6), //Thunderclap
                     (5930,  1), //Air Blast
                     (6126,  1), //Magnetic Inversion
@@ -139,7 +149,7 @@ namespace PlenBotLogUploader
                     (30828, 1), //Slick Shoes
                     (5913,  1), //Explosive Rockets
                     (5893,  1), //Electrified Net
-                    (63253, 1), //Force Signet
+                    (63253, 1), //Force Signet                    
                 }
             ),
             (
@@ -157,6 +167,7 @@ namespace PlenBotLogUploader
                     (29630, 1), //Deflecting Shot
                     (9091,  1), //Shield of Absorption
                     (13688, 1), //Lesser Shield of Absorption
+                    (9128,  1), //Sanctuary
                     (9093,  1), //Bane Signet
                     (9125,  1), //Hammer of Wisdom
                     (46170, 1), //Hammer of Wisdom
@@ -164,6 +175,8 @@ namespace PlenBotLogUploader
                     (30273, 1), //Dragon's Maw
                     (62549, 1), //Heel Crack
                     (62561, 1), //Heaven's Palm
+                    (71817, 1), //Jurisdiction (projectile)
+                    (71819, 1), //Jurisdiction (detonation)
                 }
             ),
             (
@@ -175,12 +188,14 @@ namespace PlenBotLogUploader
                     (27356, 1), //Energy Expulsion
                     (29114, 1), //Energy Expulsion
                     (28978, 1), //Surge of the Mists
+                    (26679, 1), //Forced Engagement
                     (27917, 1), //Call to Anguish
                     (62878, 1), //Reaver's Rage
                     (41220, 1), //Darkrazor's Daring
                     (28406, 1), //Jade Winds
                     (31294, 1), //Jade Winds
                     (28075, 1), //Chaotic Release
+                    (71880, 1), //Otherworldly Attaction
                 }
             ),
             (
@@ -191,11 +206,16 @@ namespace PlenBotLogUploader
                     (63075, 1), //Overbearing Smash
                     (12598, 1), //Call Lightning
                     (31658, 1), //Glyph of Equality (non-celestial)
+                    (45743, 1), //Charge
                     (67179, 1), //Slam - ID seems incorrect?
                     (12476, 1), //Spike Trap
                     (63330, 1), //Thump
+                    (42894, 1), //Brutal Charge
+                    (46432, 1), //Brutal Charge
+                    (42907, 1), //Takedown
                     (12523, 1), //Counterattack Kick
                     (31321, 1), //Wing Buffet
+                    (41908, 1), //Wing Buffet
                     (12511, 1), //Point-Blank Shot
                     (30448, 1), //Glyph of the Tides (non-celestial)
                     (12475, 2), //Hilt Bash
@@ -203,6 +223,11 @@ namespace PlenBotLogUploader
                     (12638, 1), //Path of Scars
                     (29558, 1), //Glyph of the Tides (celestial)
                     (12621, 1), //Call of the Wild
+                    (71963, 1), //Oaken Cudgel
+                    (71002, 1), //Dimension Breach
+                    (44360, 1), //Fear
+                    (43375, 1), //Prelude Lash
+                    (71841, 1), //Wild Strikes
                 }
             ),
             (
@@ -213,6 +238,7 @@ namespace PlenBotLogUploader
                     (56873, 1), //Time Sink
                     (30643, 1), //Tides of Time
                     (10232, 1), //Signet of Domination
+                    (72007, 1), //Phantasmal Sharpshooter
                     (30359, 1), //Gravity Well
                     (10220, 1), //Illusionary Wave
                     (62573, 1), //Psychic Force
@@ -248,6 +274,7 @@ namespace PlenBotLogUploader
                     (62511, 1), //Vile Blast
                     (62539, 1), //Voracious Arc
                     (62563, 1), //Vital Draw
+                    (71998, 1), //Devouring Visage
                 }
             )
 
@@ -329,6 +356,28 @@ namespace PlenBotLogUploader
                 {
                     var webhook = allWebhooks[key];
 
+                    static void SetWidths3Columns(TextTable textTable)
+                    {
+                        textTable.SetColumnWidthRange(0, 3, 3);
+                        textTable.SetColumnWidthRange(1, 22, 22);
+                        textTable.SetColumnWidthRange(2, 8, 8);
+                    }
+                    static void SetWidths4Columns(TextTable textTable)
+                    {
+                        textTable.SetColumnWidthRange(0, 3, 3);
+                        textTable.SetColumnWidthRange(1, 17, 17);
+                        textTable.SetColumnWidthRange(2, 8, 8);
+                        textTable.SetColumnWidthRange(3, 5, 5);
+                    }
+                    static void SetWidths5Columns(TextTable textTable)
+                    {
+                        textTable.SetColumnWidthRange(0, 3, 3);
+                        textTable.SetColumnWidthRange(1, 10, 10);
+                        textTable.SetColumnWidthRange(2, 7, 7);
+                        textTable.SetColumnWidthRange(3, 6, 6);
+                        textTable.SetColumnWidthRange(4, 7, 7);
+                    }
+
                     // BEAR
                     var damageField = new DiscordApiJsonContentEmbedField();
                     var healingField = new DiscordApiJsonContentEmbedField();
@@ -365,11 +414,12 @@ namespace PlenBotLogUploader
                             .Select(x => x.Defenses[0].DeadCount)
                             .Sum();
                         var squadSummary = new TextTable(5, tableStyle, tableBorders);
-                        squadSummary.SetColumnWidthRange(0, 3, 3);
-                        squadSummary.SetColumnWidthRange(1, 10, 10);
-                        squadSummary.SetColumnWidthRange(2, 10, 10);
-                        squadSummary.SetColumnWidthRange(3, 8, 8);
-                        squadSummary.SetColumnWidthRange(4, 8, 8);
+                        SetWidths5Columns(squadSummary);
+                        //squadSummary.SetColumnWidthRange(0, 3, 3);
+                        //squadSummary.SetColumnWidthRange(1, 10, 10);
+                        //squadSummary.SetColumnWidthRange(2, 10, 10);
+                        //squadSummary.SetColumnWidthRange(3, 8, 8);
+                        //squadSummary.SetColumnWidthRange(4, 8, 8);
                         squadSummary.AddCell("#", tableCellCenterAlign);
                         squadSummary.AddCell("DMG", tableCellCenterAlign);
                         squadSummary.AddCell("DPS", tableCellCenterAlign);
@@ -415,11 +465,12 @@ namespace PlenBotLogUploader
                                 .Select(x => x.StatsTargets.Select(y => y[0].Killed).Sum())
                                 .Sum();
                             var enemySummary = new TextTable(5, tableStyle, tableBorders);
-                            enemySummary.SetColumnWidthRange(0, 3, 3);
-                            enemySummary.SetColumnWidthRange(1, 10, 10);
-                            enemySummary.SetColumnWidthRange(2, 10, 10);
-                            enemySummary.SetColumnWidthRange(3, 8, 8);
-                            enemySummary.SetColumnWidthRange(4, 8, 8);
+                            SetWidths5Columns(enemySummary);
+                            //enemySummary.SetColumnWidthRange(0, 3, 3);
+                            //enemySummary.SetColumnWidthRange(1, 10, 10);
+                            //enemySummary.SetColumnWidthRange(2, 10, 10);
+                            //enemySummary.SetColumnWidthRange(3, 8, 8);
+                            //enemySummary.SetColumnWidthRange(4, 8, 8);
                             enemySummary.AddCell("#", tableCellCenterAlign);
                             enemySummary.AddCell("DMG", tableCellCenterAlign);
                             enemySummary.AddCell("DPS", tableCellCenterAlign);
@@ -456,10 +507,11 @@ namespace PlenBotLogUploader
                         
                         if (webhook.ShowDpsColumn)
                         {
-                            damageSummary.SetColumnWidthRange(0, 3, 3);
-                            damageSummary.SetColumnWidthRange(1, 25, 25);
-                            damageSummary.SetColumnWidthRange(2, 7, 7);
-                            damageSummary.SetColumnWidthRange(3, 6, 6);
+                            SetWidths4Columns(damageSummary);
+                            //damageSummary.SetColumnWidthRange(0, 3, 3);
+                            //damageSummary.SetColumnWidthRange(1, 25, 25);
+                            //damageSummary.SetColumnWidthRange(2, 7, 7);
+                            //damageSummary.SetColumnWidthRange(3, 6, 6);
                             damageSummary.AddCell("#", tableCellCenterAlign);
                             damageSummary.AddCell("Name");
                             damageSummary.AddCell("DMG", tableCellRightAlign);
@@ -467,9 +519,10 @@ namespace PlenBotLogUploader
                         }
                         else
                         {
-                            damageSummary.SetColumnWidthRange(0, 3, 3);
-                            damageSummary.SetColumnWidthRange(1, 27, 27);
-                            damageSummary.SetColumnWidthRange(2, 12, 12);
+                            SetWidths3Columns(damageSummary);
+                            //damageSummary.SetColumnWidthRange(0, 3, 3);
+                            //damageSummary.SetColumnWidthRange(1, 25, 25);
+                            //damageSummary.SetColumnWidthRange(2, 8, 8);
                             damageSummary.AddCell("#", tableCellCenterAlign);
                             damageSummary.AddCell("Name");
                             damageSummary.AddCell("DMG", tableCellRightAlign);
@@ -478,9 +531,16 @@ namespace PlenBotLogUploader
                         var rank = 0;
                         foreach (var player in damageStats)
                         {
+                            var profession = $"({player.ProfessionShort})";
+
+                            //if (webhook?.ClassEmojis?.Any() == true)
+                            //{
+                            //    profession = webhook.ClassEmojis.FirstOrDefault(x => x.className.Equals(player.Profession, StringComparison.InvariantCultureIgnoreCase)).emojiCode;
+                            //}
+
                             rank++;
                             damageSummary.AddCell($"{rank}", tableCellCenterAlign);
-                            damageSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
+                            damageSummary.AddCell($"{profession} {player.Name}");
                             damageSummary.AddCell($"{player.DpsTargets.Sum(y => y[0].Damage).ParseAsK()}", tableCellRightAlign);
 
                             if (webhook.ShowDpsColumn)
@@ -499,18 +559,21 @@ namespace PlenBotLogUploader
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var cleansesSummary = new TextTable(3, tableStyle, tableBorders);
-                        cleansesSummary.SetColumnWidthRange(0, 3, 3);
-                        cleansesSummary.SetColumnWidthRange(1, 27, 27);
-                        cleansesSummary.SetColumnWidthRange(2, 12, 12);
+                        SetWidths3Columns(cleansesSummary);
+                        //cleansesSummary.SetColumnWidthRange(0, 3, 3);
+                        //cleansesSummary.SetColumnWidthRange(1, 25, 25);
+                        //cleansesSummary.SetColumnWidthRange(2, 8, 8);
                         cleansesSummary.AddCell("#", tableCellCenterAlign);
                         cleansesSummary.AddCell("Name");
                         cleansesSummary.AddCell("Cleanses", tableCellRightAlign);
                         rank = 0;
                         foreach (var player in cleansesStats)
                         {
+                            var profession = $"({player.ProfessionShort})";
+
                             rank++;
                             cleansesSummary.AddCell($"{rank}", tableCellCenterAlign);
-                            cleansesSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
+                            cleansesSummary.AddCell($"{profession} {player.Name}");
                             cleansesSummary.AddCell($"{player.Support[0].CondiCleanseTotal}", tableCellRightAlign);
                         }
 
@@ -524,18 +587,21 @@ namespace PlenBotLogUploader
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var boonStripsSummary = new TextTable(3, tableStyle, tableBorders);
-                        boonStripsSummary.SetColumnWidthRange(0, 3, 3);
-                        boonStripsSummary.SetColumnWidthRange(1, 27, 27);
-                        boonStripsSummary.SetColumnWidthRange(2, 12, 12);
+                        SetWidths3Columns(boonStripsSummary);
+                        //boonStripsSummary.SetColumnWidthRange(0, 3, 3);
+                        //boonStripsSummary.SetColumnWidthRange(1, 25, 25);
+                        //boonStripsSummary.SetColumnWidthRange(2, 8, 8);
                         boonStripsSummary.AddCell("#", tableCellCenterAlign);
                         boonStripsSummary.AddCell("Name");
                         boonStripsSummary.AddCell("Strips", tableCellRightAlign);
                         rank = 0;
                         foreach (var player in boonStripsStats)
                         {
+                            var profession = $"({player.ProfessionShort})";
+
                             rank++;
                             boonStripsSummary.AddCell($"{rank}", tableCellCenterAlign);
-                            boonStripsSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
+                            boonStripsSummary.AddCell($"{profession} {player.Name}");
                             boonStripsSummary.AddCell($"{player.Support[0].BoonStrips}", tableCellRightAlign);
                         }
 
@@ -554,9 +620,10 @@ namespace PlenBotLogUploader
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var healingSummary = new TextTable(3, tableStyle, tableBorders);
-                        healingSummary.SetColumnWidthRange(0, 3, 3);
-                        healingSummary.SetColumnWidthRange(1, 27, 27);
-                        healingSummary.SetColumnWidthRange(2, 12, 12);
+                        SetWidths3Columns(healingSummary);
+                        //healingSummary.SetColumnWidthRange(0, 3, 3);
+                        //healingSummary.SetColumnWidthRange(1, 25, 25);
+                        //healingSummary.SetColumnWidthRange(2, 8, 8);
                         healingSummary.AddCell("#", tableCellCenterAlign);
                         healingSummary.AddCell("Name");
                         healingSummary.AddCell("Healing", tableCellRightAlign);
@@ -567,9 +634,11 @@ namespace PlenBotLogUploader
 
                             if (healing < 1) break;
 
+                            var profession = $"({player.ProfessionShort})";
+
                             rank++;
                             healingSummary.AddCell($"{rank}", tableCellCenterAlign);
-                            healingSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
+                            healingSummary.AddCell($"{profession} {player.Name}");
                             //healingSummary.AddCell($"{player.ExtHealingStats.OutgoingHealingAllies.Aggregate(0, (sum, next) => sum + (next.FirstOrDefault()?.Healing ?? 0), sum => sum)}", tableCellRightAlign);
                             healingSummary.AddCell($"{healing.ParseAsK()}", tableCellRightAlign);
                         }
@@ -589,9 +658,10 @@ namespace PlenBotLogUploader
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var barrierSummary = new TextTable(3, tableStyle, tableBorders);
-                        barrierSummary.SetColumnWidthRange(0, 3, 3);
-                        barrierSummary.SetColumnWidthRange(1, 27, 27);
-                        barrierSummary.SetColumnWidthRange(2, 12, 12);
+                        SetWidths3Columns(barrierSummary);
+                        //barrierSummary.SetColumnWidthRange(0, 3, 3);
+                        //barrierSummary.SetColumnWidthRange(1, 27, 27);
+                        //barrierSummary.SetColumnWidthRange(2, 12, 12);
                         barrierSummary.AddCell("#", tableCellCenterAlign);
                         barrierSummary.AddCell("Name");
                         barrierSummary.AddCell("Barrier", tableCellRightAlign);
@@ -609,9 +679,11 @@ namespace PlenBotLogUploader
 
                             if (barrier < 1) break;
 
+                            var profession = $"({player.ProfessionShort})";
+
                             rank++;
                             barrierSummary.AddCell($"{rank}", tableCellCenterAlign);
-                            barrierSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
+                            barrierSummary.AddCell($"{profession} {player.Name}");
                             barrierSummary.AddCell($"{barrier.ParseAsK()}", tableCellRightAlign);
                         }
 
@@ -635,17 +707,45 @@ namespace PlenBotLogUploader
                                 (
                                     attack => attack
                                     // Filter to only skills that match profession and skill ID.
-                                    .Where(skill => mapping.Any(m => m.professions.Any(p => p == player.Profession) && m.skills.Any(s => s.id == skill.Id)))
+                                    .Where(
+                                        skill => 
+                                        mapping.Any(
+                                            m => 
+                                            m.category.Any(
+                                                c => 
+                                                c == player.Profession || c == "Relics"
+                                            ) && m.skills.Any(
+                                                s => 
+                                                s.id == skill.Id
+                                            )
+                                        )
+                                    )
                                     // Sum the skills multiplying by matching skill ID coefficient.
-                                    .Sum(skill => skill.ConnectedHits * mapping.FirstOrDefault(m => m.professions.Any(p => p == player.Profession)).skills.FirstOrDefault(s => s.id == skill.Id).coefficient)
+                                    .Sum(
+                                        skill => 
+                                        skill.ConnectedHits * mapping.FirstOrDefault(
+                                            m => 
+                                            m.category.Any(
+                                                c => 
+                                                c == player.Profession || c == "Relics"
+                                            ) && m.skills.Any(
+                                                s =>
+                                                s.id == skill.Id
+                                            )
+                                        ).skills.FirstOrDefault(
+                                            s => 
+                                            s.id == skill.Id
+                                        ).coefficient
+                                    )
                                 )
                             )
                             .Take(webhook.MaxPlayers)
                             .ToArray();
                         var ccSummary = new TextTable(3, tableStyle, tableBorders);
-                        ccSummary.SetColumnWidthRange(0, 3, 3);
-                        ccSummary.SetColumnWidthRange(1, 27, 27);
-                        ccSummary.SetColumnWidthRange(2, 12, 12);
+                        SetWidths3Columns(ccSummary);
+                        //ccSummary.SetColumnWidthRange(0, 3, 3);
+                        //ccSummary.SetColumnWidthRange(1, 27, 27);
+                        //ccSummary.SetColumnWidthRange(2, 12, 12);
                         ccSummary.AddCell("#", tableCellCenterAlign);
                         ccSummary.AddCell("Name");
                         ccSummary.AddCell("CC hits", tableCellRightAlign);
@@ -656,16 +756,46 @@ namespace PlenBotLogUploader
                             (
                                 attack => attack
                                 // Filter to only skills that match profession and skill ID.
-                                .Where(skill => mapping.Any(m => m.professions.Any(p => p == player.Profession) && m.skills.Any(s => s.id == skill.Id)))
+                                .Where(
+                                    skill => 
+                                    mapping.Any(
+                                        m => 
+                                        m.category.Any(
+                                            c => 
+                                            c == player.Profession || c == "Relics"
+                                        ) && 
+                                        m.skills.Any(
+                                            s => 
+                                            s.id == skill.Id
+                                        )
+                                    )
+                                )
                                 // Sum the skills multiplying by matching skill ID coefficient.
-                                .Sum(skill => skill.ConnectedHits * mapping.FirstOrDefault(m => m.professions.Any(p => p == player.Profession)).skills.FirstOrDefault(s => s.id == skill.Id).coefficient)
+                                .Sum(
+                                    skill => 
+                                    skill.ConnectedHits * mapping.FirstOrDefault(
+                                        m => 
+                                        m.category.Any(
+                                            c => 
+                                            c == player.Profession || c == "Relics"
+                                        ) && m.skills.Any(
+                                            s => 
+                                            s.id == skill.Id
+                                        )
+                                    ).skills.FirstOrDefault(
+                                        s => 
+                                        s.id == skill.Id
+                                    ).coefficient
+                                )
                             ));
 
                             if (hitCount < 1) break;
 
+                            var profession = $"({player.ProfessionShort})";
+
                             rank++;
                             ccSummary.AddCell($"{rank}", tableCellCenterAlign);
-                            ccSummary.AddCell($"{player.Name} ({player.ProfessionShort})");
+                            ccSummary.AddCell($"{profession} {player.Name}");
                             ccSummary.AddCell($"{hitCount}", tableCellRightAlign);
                         }
 
