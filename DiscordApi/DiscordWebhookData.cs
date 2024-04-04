@@ -87,7 +87,7 @@ namespace PlenBotLogUploader.DiscordApi
         internal bool ShowDpsColumn { get; set; } = true;
         //BEAR 
         [JsonProperty("showOpponentIcons")]
-        internal bool ShowOpponentIcons { get; set; } = true;
+        internal bool ShowClassIcons { get; set; } = true;
 
         /// <summary>
         /// A selected webhook team, with which the webhook should evaluate itself
@@ -145,6 +145,54 @@ namespace PlenBotLogUploader.DiscordApi
 
             return parsedData.Select(x => (Key: webhookId++, DiscordWebhookData: x))
                 .ToDictionary(x => x.Key, x => x.DiscordWebhookData);
+        }
+
+        /// <summary>
+        /// Resets the class emoji list to a default set
+        /// </summary>
+        internal void ResetEmojis()
+        {
+            // All the emojis here are from Bear on the job's server, but should be accessible
+            // accross discord because of the numeric unique IDs.
+            ClassEmojis =
+            [
+                ("ELEMENTALIST","<:ele:1225280046055428177>"),
+                ("TEMPEST","<:tem:1225297472709070878>"),
+                ("WEAVER","<:wea:1225297478367187019>"),
+                ("CATALYST","<:cat:1225280016099835915>"),
+                ("ENGINEER","<:eng:1225280046923645052>"),
+                ("SCRAPPER","<:scr:1225297432112271369>"),
+                ("HOLOSMITH","<:hol:1225292403833835541>"),
+                ("MECHANIST","<:mec:1225292404869955616>"),
+                ("GUARDIAN","<:gua:1225280048844771439>"),
+                ("DRAGONHUNTER","<:dra:1225280020277235833>"),
+                ("FIREBRAND","<:fir:1225280047838007358>"),
+                ("WILLBENDER","<:wil:1225292398087897250>"),
+                ("MESMER","<:mes:1225292405759021087>"),
+                ("CHRONOMANCER","<:chr:1225280017085501451>"),
+                ("MIRAGE","<:mir:1225297354018783262>"),
+                ("VIRTUOSO","<:vir:1225297476492198020>"),
+                ("NECROMANCER","<:nec:1225292411228651621>"),
+                ("REAPER","<:rea:1225292387610398820>"),
+                ("SCOURGE","<:sco:1225297431378268190>"),
+                ("HARBINGER","<:har:1225280049775775744>"),
+                ("RANGER","<:ran:1225297306866286652>"),
+                ("DRUID","<:dru:1225280045329678506>"),
+                ("SOULBEAST","<:sou:1225297433110646815>"),
+                ("UNTAMED","<:unt:1225297474693107802>"),
+                ("REVENANT","<:rev:1225297430644527114>"),
+                ("HERALD","<:her:1225292402424545360>"),
+                ("RENEGADE","<:ren:1225292392056492093>"),
+                ("VINDICATOR","<:vin:1225297475171254324>"),
+                ("THIEF","<:thi:1225297473480949760>"),
+                ("DAREDEVIL","<:dar:1225280017957912718>"),
+                ("DEADEYE","<:dea:1225280019115544586>"),
+                ("SPECTER","<:spec:1225297434876313630>"),
+                ("WARRIOR","<:war:1225297477478121504>"),
+                ("BERSERKER","<:ber:1225280014237564929>"),
+                ("SPELLBREAKER","<:spe:1225297434213744750>"),
+                ("BLADESWORN","<:bla:1225280015181156516>")
+            ];
         }
     }
 }

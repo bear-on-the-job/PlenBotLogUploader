@@ -29,6 +29,9 @@ namespace PlenBotLogUploader.DpsReport.ExtraJson
         internal double HealthPercentBurned { get; set; }
 
         [JsonProperty("enemyPlayer")]
-        internal bool EnemyPlayer { get; set; }        
+        internal bool EnemyPlayer { get; set; }
+
+        [JsonProperty("teamId")]
+        internal int TeamId { get; set; }
     }
 }
