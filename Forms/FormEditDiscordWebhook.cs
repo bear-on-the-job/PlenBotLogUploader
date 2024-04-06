@@ -87,6 +87,7 @@ namespace PlenBotLogUploader
             comboBoxMaxPlayers.SelectedItem = data?.MaxPlayers.ToString() ?? "10";
             //checkBoxShowDPSColumn.Checked = data?.ShowDpsColumn ?? true;
             checkBoxIncludeOpponentIcons.Checked = data?.ShowClassIcons ?? true;
+            checkBoxShowFightAwards.Checked = data?.ShowFightAwards ?? true;
         }
 
         private void FormEditDiscordWebhook_FormClosing(object sender, FormClosingEventArgs e)
@@ -141,7 +142,8 @@ namespace PlenBotLogUploader
                     IncludeCCSummary = checkBoxIncludeCCSummary.Checked,
                     MaxPlayers = int.Parse(comboBoxMaxPlayers.SelectedItem.ToString()),
                     ShowDpsColumn = false, // checkBoxShowDPSColumn.Checked,
-                    ShowClassIcons = checkBoxIncludeOpponentIcons.Checked
+                    ShowClassIcons = checkBoxIncludeOpponentIcons.Checked,
+                    ShowFightAwards = checkBoxShowFightAwards.Checked
                 };
 
                 DiscordWebhooks.All[reservedId].ResetEmojis();
@@ -176,6 +178,7 @@ namespace PlenBotLogUploader
             webhook.MaxPlayers = int.Parse(comboBoxMaxPlayers.SelectedItem.ToString());
             webhook.ShowDpsColumn = false; // checkBoxShowDPSColumn.Checked;
             webhook.ShowClassIcons = checkBoxIncludeOpponentIcons.Checked;
+            webhook.ShowFightAwards = checkBoxShowFightAwards.Checked;
 
             discordPingLink.listViewDiscordWebhooks.Items[discordPingLink.listViewDiscordWebhooks.Items.IndexOfKey(reservedId.ToString())] = new ListViewItem()
             {

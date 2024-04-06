@@ -14,5 +14,8 @@ namespace PlenBotLogUploader.DpsReport.ExtraJson
 
         [JsonProperty("boonStrips")]
         internal int BoonStrips { get; set; }
+
+        [JsonProperty("resurrectTime")]
+        internal float ResurrectTime { get; set; }
     }
 }

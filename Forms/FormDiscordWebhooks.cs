@@ -25,12 +25,261 @@ namespace PlenBotLogUploader
         private const string TEAM_FORMAT_PREFIX = "java";
         private const string STRETCH_FIELD = "`                                                     `";
 
+        private const int CHILLED_ID = 722;
+        private const int POISON_ID = 723;
+        private const int FEARED_ID = 791;
+
         private static readonly DiscordApiJsonContentEmbedField FIELD_SPACER = new()
         {
             Name = "",
             Value = "",
             Inline = false
         };
+
+        internal struct Award
+        {
+            public string Name { get; set; }
+            public string Description { get; set; }
+            public string Emoji { get; set; }
+            public Func<Player, IEnumerable<Target>, bool> Qualifier { get; set; }
+            public Func<Player, IEnumerable<Target>, float> Ranking { get; set; }
+        }
+
+        private List<Award> awardsX = new List<Award>
+        {
+            new Award
+            {
+                Name        = "Backstabber",
+                Description = "Highest number of flanking hits",
+                Emoji       = "🗡️",
+                Qualifier   = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount > 10 && player.StatsAll[0].FlankingRate > 1,
+                Ranking     = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount * player.StatsAll[0].FlankingRate
+            },
+            new Award
+            {
+                Name        = "Hawkeye",
+                Description = "Highest number of critical hits",
+                Emoji       = "🎯",
+                Qualifier   = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount > 10 && player.StatsAll[0].CriticalRate > 1,
+                Ranking     = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount * player.StatsAll[0].CriticalRate
+            },
+            new Award
+            {
+                Name        = "Good soldier",
+                Description = "Closest to tag",
+                Emoji       = ":military_helmet:",
+                Qualifier   = (player, targets) => !player.IsCommander,
+                Ranking     = (player, targets) => -player.StatsAll[0].DistToCom // invert to negative, so the smallest distance is highest ranking
+            },
+            new Award
+            {
+                Name        = "Sleeping on the job",
+                Description = "Longest time in down state",
+                Emoji       = "💤",
+                Qualifier   = (player, targets) => player.Defenses[0].DownDuration > 3.0f,
+                Ranking     = (player, targets) => player.Defenses[0].DownDuration
+            },
+            new Award
+            {
+                Name        = "Combat medic",
+                Description = "Spent the most time rezzing others",
+                Emoji       = "⛑️",
+                Qualifier   = (player, targets) => player.Support[0].ResurrectTime > 3.0f,
+                Ranking     = (player, targets) => player.Support[0].ResurrectTime
+            },
+            new Award
+            {
+                Name        = "Barricade",
+                Description = "Blocked the most attacks",
+                Emoji       = "🛡️",
+                Qualifier   = (player, targets) => player.Defenses[0].BlockedCount > 10,
+                Ranking     = (player, targets) => player.Defenses[0].BlockedCount
+            },
+            new Award
+            {
+                Name        = "Ninja",
+                Description = "Evaded the most attacks",
+                Emoji       = "🥷",
+                Qualifier   = (player, targets) => player.Defenses[0].EvadedCount > 10,
+                Ranking     = (player, targets) => player.Defenses[0].EvadedCount
+            },
+            new Award
+            {
+                Name        = "The Flash",
+                Description = "Most time with superspeed",
+                Emoji       = "⚡",
+                Qualifier   = (player, targets) => (player.BuffUptimes.FirstOrDefault(b => b.Id == 5974)?.BuffData[0].Uptime ?? 0f) > 5.0f,
+                Ranking     = (player, targets) => (player.BuffUptimes.FirstOrDefault(b => b.Id == 5974)?.BuffData[0].Uptime ?? 0f)
+            },
+            new Award
+            {
+                Name        = "What day is it?",
+                Description = "Interrupted by enemies the most times",
+                Emoji       = "🍥",
+                Qualifier   = (player, targets) => player.Defenses[0].InterruptedCount > 3,
+                Ranking     = (player, targets) => player.Defenses[0].InterruptedCount
+            },
+            new Award
+            {
+                Name        = "Fast Hands",
+                Description = "Swapped weapons the most times",
+                Emoji       = "⚔️",
+                Qualifier   = (player, targets) => player.StatsAll[0].SwapCount > 5,
+                Ranking     = (player, targets) => player.StatsAll[0].SwapCount
+            },
+            new Award
+            {
+                Name        = "Can't see sh*t captain!",
+                Description = "Most attacks missed",
+                Emoji       = "👓",
+                Qualifier   = (player, targets) => player.Defenses[0].MissedCount > 5,
+                Ranking     = (player, targets) => player.Defenses[0].MissedCount
+            },
+            new Award
+            {
+                Name        = "Estabili-Daddy",
+                Description = "Applied the most stability to teammates",
+                Emoji       = "<:st:1225821777033302049>",
+                Qualifier   = (player, targets) => false, // Need to figure this one out...
+                Ranking     = (player, targets) => 0
+            },
+            new Award
+            {
+                Name        = "Naked",
+                Description = "Most boons strippped from them",
+                Emoji       = ":briefs:",
+                Qualifier   = (player, targets) => player.Defenses[0].BoonStrips > 10,
+                Ranking     = (player, targets) => player.Defenses[0].BoonStrips
+            },
+            new Award
+            {
+                Name        = "I'm the Juggernaut b*tch!",
+                Description = "Most damage taken",
+                Emoji       = "💪",
+                Qualifier   = (player, targets) => player.Defenses[0].DamageTaken > 10000,
+                Ranking     = (player, targets) => player.Defenses[0].DamageTaken
+            },
+            new Award
+            {
+                Name        = "Trolololol",
+                Description = "Interrupted enemies the most times",
+                Emoji       = "🧌",
+                Qualifier   = (player, targets) => player.StatsAll[0].Interrupts > 1,
+                Ranking     = (player, targets) => player.StatsAll[0].Interrupts
+            },
+            new Award
+            {
+                Name        = "I'm too weak!",
+                Description = "Most hits with weakness",
+                Emoji       = "😩",
+                Qualifier   = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount > 10 && player.StatsAll[0].GlanceRate > 1,
+                Ranking     = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount * player.StatsAll[0].GlanceRate
+            },
+            new Award
+            {
+                Name        = "Reaper",
+                Description = "Killed the most enemies",
+                Emoji       = "💀",
+                Qualifier   = (player, targets) => player.StatsAll[0].Killed > 1,
+                Ranking     = (player, targets) => player.StatsAll[0].Killed
+            },
+            new Award
+            {
+                Name        = "John Cena",
+                Description = "Most time in stealth",
+                Emoji       = "🧢",
+                Qualifier   = (player, targets) => (player.BuffUptimes.Where(b => b.Id == 10269 || b.Id == 13017)?.Sum(b => b.BuffData[0].Uptime) ?? 0f) > 3.0f,
+                Ranking     = (player, targets) => (player.BuffUptimes.Where(b => b.Id == 10269 || b.Id == 13017)?.Sum(b => b.BuffData[0].Uptime) ?? 0f)
+            },
+            //new Award
+            //{
+            //    Name        = "Sickening",
+            //    Description = "Poisoned the most enemies",
+            //    Emoji       = "🤢",
+            //    Qualifier   = (player, targets) => player.TargetDamageDist
+            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == POISON_ID)
+            //        .FirstOrDefault()?[0][0].ConnectedHits > 5,
+            //    Ranking     = (player, targets) => player.TargetDamageDist
+            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == POISON_ID)
+            //        .FirstOrDefault()?[0][0].ConnectedHits ?? 0
+            //},
+            //new Award
+            //{
+            //    Name        = "Cold-hearted",
+            //    Description = "Chilled the most enemies",
+            //    Emoji       = "🥶",
+            //    Qualifier   = (player, targets) => player.TargetDamageDist
+            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == CHILLED_ID)
+            //        .FirstOrDefault()?[0][0].ConnectedHits > 5,
+            //    Ranking     = (player, targets) => player.TargetDamageDist
+            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == CHILLED_ID)
+            //        .FirstOrDefault()?[0][0].ConnectedHits ?? 0
+            //},
+            //new Award
+            //{
+            //    Name        = "Terrifying",
+            //    Description = "Feared the most enemies",
+            //    Emoji       = "😱",
+            //    Qualifier   = (player, targets) => player.TargetDamageDist
+            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == FEARED_ID)
+            //        .FirstOrDefault()?[0][0].ConnectedHits > 5,
+            //    Ranking     = (player, targets) => player.TargetDamageDist
+            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == FEARED_ID)
+            //        .FirstOrDefault()?[0][0].ConnectedHits ?? 0
+            //}
+
+            //🥶 🤬 😱 💩 💀
+
+            // Is it cold in here? - Chilled for the longest duration
+            // Cold as ice - Applied the most chill to the enemy
+            // Took an arrow in the knee - Crippled for the longest duration
+            // Ankle-buster - Applied the most cripple to the enemy
+        };
+
+        /// <summary>
+        /// Assign awards to players, based on their qualifications and ranking. Will pick top 
+        /// 3 awards randomly.
+        /// </summary>
+        private IEnumerable<DiscordApiJsonContentEmbedField> AssignAwards(IEnumerable<Player> players, IEnumerable<Target> targets)
+        {
+            // Run all awards to see which has most qualifiers
+            var qualifiers = awardsX
+                .Select
+                (
+                    award => new
+                    {
+                        Award = award,
+                        Players = players.Where(p => award.Qualifier(p, targets)).OrderByDescending(p => award.Ranking(p, targets))
+                    }
+                )
+                .Where(q => q.Players.Any())
+                .ToList();
+
+            var winners = Shuffle(qualifiers).Take(3).ToList();
+            //var winners = Shuffle(qualifiers).ToList();
+            var fields = winners
+                .Select
+                (
+                    winner => CreateAwardField(winner.Award.Name, winner.Award.Description, winner.Award.Emoji, winner.Players.FirstOrDefault())
+                )
+                .ToList();
+
+            fields.First().Name = "`\n`" + fields.First().Name;
+
+            return fields;
+        }
+
+        // Private method to create the formatted rank fields for each category.
+        DiscordApiJsonContentEmbedField CreateAwardField(string name, string description, string emoji, Player player)
+        {
+            var field = new DiscordApiJsonContentEmbedField();
+
+            field.Name = $"{emoji}`  `{name} - {player.Name}";
+            field.Value = $"`     `{description}";
+            field.Inline = false;
+
+            return field;
+        }
 
         private List<(List<string> category, List<(int id, double coefficient)> skills)> mapping = new List<(List<string>, List<(int, double)>)>
         {
@@ -307,6 +556,22 @@ namespace PlenBotLogUploader
         private readonly TableBordersStyle tableStyle = TableBordersStyle.HORIZONTAL_ONLY;
         private readonly TableVisibleBorders tableBorders = TableVisibleBorders.HEADER_ONLY;
         #endregion
+
+        static List<T> Shuffle<T>(List<T> list)
+        {
+            Random rng = new Random();
+            int n = list.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rng.Next(n + 1);
+                T value = list[k];
+                list[k] = list[n];
+                list[n] = value;
+            }
+
+            return list;
+        }
 
         internal FormDiscordWebhooks(FormMain mainLink)
         {
@@ -780,6 +1045,13 @@ namespace PlenBotLogUploader
                         }
 
                         rankFields = adjustedFields;
+
+                        if (webhook.ShowFightAwards)
+                        {
+                            // Add awards
+                            var awardFields = AssignAwards(reportJSON.ExtraJson.Players, reportJSON.ExtraJson.Targets);
+                            if (awardFields?.Any() is true) rankFields.AddRange(awardFields);
+                        }
 
                         // Add a spacer to the last rank field, so the footer is not so close.
                         rankFields.Add(FIELD_SPACER);

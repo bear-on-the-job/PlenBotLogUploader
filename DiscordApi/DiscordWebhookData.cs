@@ -88,6 +88,9 @@ namespace PlenBotLogUploader.DiscordApi
         //BEAR 
         [JsonProperty("showOpponentIcons")]
         internal bool ShowClassIcons { get; set; } = true;
+        //BEAR 
+        [JsonProperty("showFightAwards")]
+        internal bool ShowFightAwards { get; set; } = true;
 
         /// <summary>
         /// A selected webhook team, with which the webhook should evaluate itself

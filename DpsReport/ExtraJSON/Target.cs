@@ -33,5 +33,8 @@ namespace PlenBotLogUploader.DpsReport.ExtraJson
 
         [JsonProperty("teamId")]
         internal int TeamId { get; set; }
+
+        [JsonProperty("buffs")]
+        internal Buffs[] Buffs { get; set; }
     }
 }
