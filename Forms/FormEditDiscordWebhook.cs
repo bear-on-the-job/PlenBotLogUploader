@@ -28,6 +28,7 @@ namespace PlenBotLogUploader
             Text = (data is null) ? "Add a new webhook" : "Edit an existing webhook";
             textBoxName.Text = data?.Name ?? "";
             textBoxUrl.Text = data?.Url ?? "";
+            textBoxGoogleSheetsUrl.Text = data?.GoogleSheetsUrl ?? "";
             switch (data?.SuccessFailToggle ?? DiscordWebhookDataSuccessToggle.OnSuccessAndFailure)
             {
                 case DiscordWebhookDataSuccessToggle.OnSuccessOnly:
@@ -125,6 +126,7 @@ namespace PlenBotLogUploader
                     Active = true,
                     Name = textBoxName.Text,
                     Url = textBoxUrl.Text,
+                    GoogleSheetsUrl = textBoxGoogleSheetsUrl.Text,
                     SuccessFailToggle = successFailToggle,
                     SummaryType = summaryType,
                     BossesDisable = ConvertCheckboxListToArrayOfBossIds(),
@@ -160,6 +162,7 @@ namespace PlenBotLogUploader
             webhook.Active = data.Active;
             webhook.Name = textBoxName.Text;
             webhook.Url = textBoxUrl.Text;
+            webhook.GoogleSheetsUrl = textBoxGoogleSheetsUrl.Text;
             webhook.SuccessFailToggle = successFailToggle;
             webhook.SummaryType = summaryType;
             webhook.BossesDisable = ConvertCheckboxListToArrayOfBossIds();

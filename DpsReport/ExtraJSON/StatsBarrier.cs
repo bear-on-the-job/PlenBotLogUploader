@@ -3,15 +3,15 @@ using System;
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal class StatsBarrier
+    public class StatsBarrier
     {
         [JsonProperty("outgoingBarrier")]
-        internal OutgoingBarrier[] OutgoingBarrier { get; set; }
+        public OutgoingBarrier[] OutgoingBarrier { get; set; }
 
         [JsonProperty("outgoingBarrierAllies")]
-        internal OutgoingBarrier[][] OutgoingBarrierAllies { get; set; }
+        public OutgoingBarrier[][] OutgoingBarrierAllies { get; set; }
 
-        internal long TotalBarrierOnSquad
+        public long TotalBarrierOnSquad
         {
             get
             {

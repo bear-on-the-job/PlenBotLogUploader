@@ -1,11 +1,13 @@
 ﻿using Newtonsoft.Json;
 using PlenBotLogUploader.AppSettings;
 using PlenBotLogUploader.DiscordApi;
+using PlenBotLogUploader.DiscordApi.Awards;
 using PlenBotLogUploader.DpsReport;
 using PlenBotLogUploader.DpsReport.ExtraJson;
 using PlenBotLogUploader.Tools;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -13,6 +15,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using TextTableFormatter;
+using static System.Net.WebRequestMethods;
 
 namespace PlenBotLogUploader
 {
@@ -23,7 +26,7 @@ namespace PlenBotLogUploader
         private const int GREEN_TEAM = 2752;
         private const string NO_EMOJI = "⭕";
         private const string TEAM_FORMAT_PREFIX = "java";
-        private const string STRETCH_FIELD = "`                                                     `";
+        private const string STRETCH_FIELD = "";
 
         private const int CHILLED_ID = 722;
         private const int POISON_ID = 723;
@@ -36,246 +39,154 @@ namespace PlenBotLogUploader
             Inline = false
         };
 
-        internal struct Award
+        private List<AwardDisplay> awardDisplays = new List<AwardDisplay>();
+        private List<Award> awards = new List<Award>();
+
+        /// <summary>
+        /// Parses CSV content into award display list
+        /// </summary>
+        private static List<AwardDisplay> ParseCsvToAwardDisplays(string csvContent, IEnumerable<Skill> skills, IEnumerable<Buff> buffs)
         {
-            public string Name { get; set; }
-            public string Description { get; set; }
-            public string Emoji { get; set; }
-            public Func<Player, IEnumerable<Target>, bool> Qualifier { get; set; }
-            public Func<Player, IEnumerable<Target>, float> Ranking { get; set; }
+            List<AwardDisplay> awardDisplays = new List<AwardDisplay>();
+
+            // Split the CSV content into lines
+            var lines = csvContent.Split("\r\n");
+
+            // Iterate over each line (skipping the header)
+            for (int i = 1; i < lines.Length; i++)
+            {
+                // Skip empty lines
+                if (string.IsNullOrWhiteSpace(lines[i])) continue;
+
+                // Split the line into columns
+                var columns = lines[i].Split(',');
+                if (columns.Length < 8) continue;
+
+                // Create a new Person object and add it to the list
+                awardDisplays.Add(new AwardDisplay
+                {
+                    Skills = skills,
+                    Buffs = buffs,
+
+                    Description = columns[0],
+                    Name = columns[1],
+                    Emoji = columns[2],
+                    Rarity = columns[3],
+                    Active = columns[4],
+
+                    Category = columns[5],
+                    Property = columns[6],
+                    Qualifier = float.TryParse(columns[7], out var value) ? value : 0f,
+
+                    AbilityNames = columns.Length > 8 ? columns[8..] : null
+                });
+            }
+
+            return awardDisplays;
         }
 
-        private List<Award> awardsX = new List<Award>
+        /// <summary>
+        /// Loads configured award display settings from google sheets
+        /// </summary>
+        private void LoadAwardDisplays(string googleSheetsUrl, IEnumerable<Skill> skills, IEnumerable<Buff> buffs)
         {
-            new Award
-            {
-                Name        = "Backstabber",
-                Description = "Highest number of flanking hits",
-                Emoji       = "🗡️",
-                Qualifier   = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount > 10 && player.StatsAll[0].FlankingRate > 1,
-                Ranking     = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount * player.StatsAll[0].FlankingRate
-            },
-            new Award
-            {
-                Name        = "Hawkeye",
-                Description = "Highest number of critical hits",
-                Emoji       = "🎯",
-                Qualifier   = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount > 10 && player.StatsAll[0].CriticalRate > 1,
-                Ranking     = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount * player.StatsAll[0].CriticalRate
-            },
-            new Award
-            {
-                Name        = "Good soldier",
-                Description = "Closest to tag",
-                Emoji       = ":military_helmet:",
-                Qualifier   = (player, targets) => !player.IsCommander,
-                Ranking     = (player, targets) => -player.StatsAll[0].DistToCom // invert to negative, so the smallest distance is highest ranking
-            },
-            new Award
-            {
-                Name        = "Sleeping on the job",
-                Description = "Longest time in down state",
-                Emoji       = "💤",
-                Qualifier   = (player, targets) => player.Defenses[0].DownDuration > 3.0f,
-                Ranking     = (player, targets) => player.Defenses[0].DownDuration
-            },
-            new Award
-            {
-                Name        = "Combat medic",
-                Description = "Spent the most time rezzing others",
-                Emoji       = "⛑️",
-                Qualifier   = (player, targets) => player.Support[0].ResurrectTime > 3.0f,
-                Ranking     = (player, targets) => player.Support[0].ResurrectTime
-            },
-            new Award
-            {
-                Name        = "Barricade",
-                Description = "Blocked the most attacks",
-                Emoji       = "🛡️",
-                Qualifier   = (player, targets) => player.Defenses[0].BlockedCount > 10,
-                Ranking     = (player, targets) => player.Defenses[0].BlockedCount
-            },
-            new Award
-            {
-                Name        = "Ninja",
-                Description = "Evaded the most attacks",
-                Emoji       = "🥷",
-                Qualifier   = (player, targets) => player.Defenses[0].EvadedCount > 10,
-                Ranking     = (player, targets) => player.Defenses[0].EvadedCount
-            },
-            new Award
-            {
-                Name        = "The Flash",
-                Description = "Most time with superspeed",
-                Emoji       = "⚡",
-                Qualifier   = (player, targets) => (player.BuffUptimes.FirstOrDefault(b => b.Id == 5974)?.BuffData[0].Uptime ?? 0f) > 5.0f,
-                Ranking     = (player, targets) => (player.BuffUptimes.FirstOrDefault(b => b.Id == 5974)?.BuffData[0].Uptime ?? 0f)
-            },
-            new Award
-            {
-                Name        = "What day is it?",
-                Description = "Interrupted by enemies the most times",
-                Emoji       = "🍥",
-                Qualifier   = (player, targets) => player.Defenses[0].InterruptedCount > 3,
-                Ranking     = (player, targets) => player.Defenses[0].InterruptedCount
-            },
-            new Award
-            {
-                Name        = "Fast Hands",
-                Description = "Swapped weapons the most times",
-                Emoji       = "⚔️",
-                Qualifier   = (player, targets) => player.StatsAll[0].SwapCount > 5,
-                Ranking     = (player, targets) => player.StatsAll[0].SwapCount
-            },
-            new Award
-            {
-                Name        = "Can't see sh*t captain!",
-                Description = "Most attacks missed",
-                Emoji       = "👓",
-                Qualifier   = (player, targets) => player.Defenses[0].MissedCount > 5,
-                Ranking     = (player, targets) => player.Defenses[0].MissedCount
-            },
-            new Award
-            {
-                Name        = "Estabili-Daddy",
-                Description = "Applied the most stability to teammates",
-                Emoji       = "<:st:1225821777033302049>",
-                Qualifier   = (player, targets) => false, // Need to figure this one out...
-                Ranking     = (player, targets) => 0
-            },
-            new Award
-            {
-                Name        = "Naked",
-                Description = "Most boons strippped from them",
-                Emoji       = ":briefs:",
-                Qualifier   = (player, targets) => player.Defenses[0].BoonStrips > 10,
-                Ranking     = (player, targets) => player.Defenses[0].BoonStrips
-            },
-            new Award
-            {
-                Name        = "I'm the Juggernaut b*tch!",
-                Description = "Most damage taken",
-                Emoji       = "💪",
-                Qualifier   = (player, targets) => player.Defenses[0].DamageTaken > 10000,
-                Ranking     = (player, targets) => player.Defenses[0].DamageTaken
-            },
-            new Award
-            {
-                Name        = "Trolololol",
-                Description = "Interrupted enemies the most times",
-                Emoji       = "🧌",
-                Qualifier   = (player, targets) => player.StatsAll[0].Interrupts > 1,
-                Ranking     = (player, targets) => player.StatsAll[0].Interrupts
-            },
-            new Award
-            {
-                Name        = "I'm too weak!",
-                Description = "Most hits with weakness",
-                Emoji       = "😩",
-                Qualifier   = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount > 10 && player.StatsAll[0].GlanceRate > 1,
-                Ranking     = (player, targets) => player.StatsAll[0].ConnectedDirectDamageCount * player.StatsAll[0].GlanceRate
-            },
-            new Award
-            {
-                Name        = "Reaper",
-                Description = "Killed the most enemies",
-                Emoji       = "💀",
-                Qualifier   = (player, targets) => player.StatsAll[0].Killed > 1,
-                Ranking     = (player, targets) => player.StatsAll[0].Killed
-            },
-            new Award
-            {
-                Name        = "John Cena",
-                Description = "Most time in stealth",
-                Emoji       = "🧢",
-                Qualifier   = (player, targets) => (player.BuffUptimes.Where(b => b.Id == 10269 || b.Id == 13017)?.Sum(b => b.BuffData[0].Uptime) ?? 0f) > 3.0f,
-                Ranking     = (player, targets) => (player.BuffUptimes.Where(b => b.Id == 10269 || b.Id == 13017)?.Sum(b => b.BuffData[0].Uptime) ?? 0f)
-            },
-            //new Award
-            //{
-            //    Name        = "Sickening",
-            //    Description = "Poisoned the most enemies",
-            //    Emoji       = "🤢",
-            //    Qualifier   = (player, targets) => player.TargetDamageDist
-            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == POISON_ID)
-            //        .FirstOrDefault()?[0][0].ConnectedHits > 5,
-            //    Ranking     = (player, targets) => player.TargetDamageDist
-            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == POISON_ID)
-            //        .FirstOrDefault()?[0][0].ConnectedHits ?? 0
-            //},
-            //new Award
-            //{
-            //    Name        = "Cold-hearted",
-            //    Description = "Chilled the most enemies",
-            //    Emoji       = "🥶",
-            //    Qualifier   = (player, targets) => player.TargetDamageDist
-            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == CHILLED_ID)
-            //        .FirstOrDefault()?[0][0].ConnectedHits > 5,
-            //    Ranking     = (player, targets) => player.TargetDamageDist
-            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == CHILLED_ID)
-            //        .FirstOrDefault()?[0][0].ConnectedHits ?? 0
-            //},
-            //new Award
-            //{
-            //    Name        = "Terrifying",
-            //    Description = "Feared the most enemies",
-            //    Emoji       = "😱",
-            //    Qualifier   = (player, targets) => player.TargetDamageDist
-            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == FEARED_ID)
-            //        .FirstOrDefault()?[0][0].ConnectedHits > 5,
-            //    Ranking     = (player, targets) => player.TargetDamageDist
-            //        .Where(t => t.Length > 0 && t[0].Length > 0 && t[0][0].Id == FEARED_ID)
-            //        .FirstOrDefault()?[0][0].ConnectedHits ?? 0
-            //}
+            if (string.IsNullOrEmpty(googleSheetsUrl)) return;
 
-            //🥶 🤬 😱 💩 💀
+            var pattern = @"\/spreadsheets\/d\/([0-9a-zA-Z]+)\/";
+            var sheetId = Regex.Match(googleSheetsUrl, pattern);
+            if (sheetId is null || !sheetId.Success || sheetId.Groups.Count < 2) return;
+                        
+            using var client = new HttpClient();
+            var csvUrl = $"https://docs.google.com/spreadsheets/d/{sheetId.Groups[1].Value}/export?format=csv";            
+            var csvContent = client.GetStringAsync(csvUrl).Result;
+            if (csvContent is null) return;
 
-            // Is it cold in here? - Chilled for the longest duration
-            // Cold as ice - Applied the most chill to the enemy
-            // Took an arrow in the knee - Crippled for the longest duration
-            // Ankle-buster - Applied the most cripple to the enemy
-        };
+            awardDisplays = ParseCsvToAwardDisplays(csvContent, skills, buffs);
+        }
 
         /// <summary>
         /// Assign awards to players, based on their qualifications and ranking. Will pick top 
         /// 3 awards randomly.
         /// </summary>
-        private IEnumerable<DiscordApiJsonContentEmbedField> AssignAwards(IEnumerable<Player> players, IEnumerable<Target> targets)
+        private IEnumerable<DiscordApiJsonContentEmbedField> AssignAwards(IEnumerable<Player> players, IEnumerable<Target> targets, string googleSheetsUrl, IEnumerable<Skill> skills, IEnumerable<Buff> buffs)
         {
+            LoadAwardDisplays(googleSheetsUrl, skills, buffs);
+
+            awards = awardDisplays
+                .Where(ad => ad.Active.Equals("yes", StringComparison.InvariantCultureIgnoreCase) || ad.Active.Equals("true", StringComparison.InvariantCultureIgnoreCase))
+                .Select(ad => new Award { Display = ad })
+                //.Select(ad => new Award { Display = ad, Processor = awardProcessors.FirstOrDefault(ap => ap.Description == ad.Description) })
+                //.Where(a => a.Processor is not null)
+                .ToList();
+
             // Run all awards to see which has most qualifiers
-            var qualifiers = awardsX
+            var qualifiers = awards
                 .Select
                 (
                     award => new
                     {
                         Award = award,
-                        Players = players.Where(p => award.Qualifier(p, targets)).OrderByDescending(p => award.Ranking(p, targets))
+                        Players = players.Where(p => award.Display.Qualify(p, targets)).OrderByDescending(p => award.Display.Rank(p, targets))
                     }
                 )
                 .Where(q => q.Players.Any())
                 .ToList();
 
-            var winners = Shuffle(qualifiers).Take(3).ToList();
-            //var winners = Shuffle(qualifiers).ToList();
+            var shuffled = Shuffle(qualifiers).ToList();            
+            var legendary = shuffled
+                .Where(s => s.Award.Display.Rarity == "Legendary")
+                .ToList();
+            var epic = shuffled
+                .Where(s => s.Award.Display.Rarity == "Epic")
+                .ToList();
+            var rare = shuffled
+                .Where(s => s.Award.Display.Rarity == "Rare")
+                .ToList();
+            var common = shuffled
+                .Where(s => s.Award.Display.Rarity == "Common")
+                .ToList();
+
+            // Default the winners to those with legendary awards
+            var winners = legendary;
+            winners.AddRange(epic);
+            winners.AddRange(rare);
+            winners.AddRange(common);
+
+            // Take top 3 after combining
+            winners = winners.Take(3).ToList();
             var fields = winners
                 .Select
                 (
-                    winner => CreateAwardField(winner.Award.Name, winner.Award.Description, winner.Award.Emoji, winner.Players.FirstOrDefault())
+                    winner => CreateAwardField(winner.Award.Display.Name, winner.Award.Display.Description, winner.Award.Display.Emoji, winner.Award.Display.Rarity, winner.Players.FirstOrDefault())
                 )
                 .ToList();
 
-            fields.First().Name = "`\n`" + fields.First().Name;
+            fields.Insert(0, FIELD_SPACER);
+            fields.Insert(0, FIELD_SPACER);
+            //fields.First().Name = "\n" + fields.First().Name;
 
             return fields;
         }
 
-        // Private method to create the formatted rank fields for each category.
-        DiscordApiJsonContentEmbedField CreateAwardField(string name, string description, string emoji, Player player)
+        /// <summary>
+        /// Private method to create the formatted rank fields for each category.
+        /// </summary>
+        DiscordApiJsonContentEmbedField CreateAwardField(string name, string description, string emoji, string rarity, Player player)
         {
+            var format = rarity switch
+            {
+                "Common" => "",
+                "Rare" => "fix\n",
+                "Epic" => "prolog\n",
+                "Legendary" => "ml\n",
+                _ => ""
+            };
+
+            var textInfo = new CultureInfo("en-US", false).TextInfo;
             var field = new DiscordApiJsonContentEmbedField();
 
-            field.Name = $"{emoji}`  `{name} - {player.Name}";
-            field.Value = $"`     `{description}";
+            field.Name = $"{emoji}   {name} - {player.Name}";
+            field.Value = $"```{format}{textInfo.ToTitleCase(description)}```";
             field.Inline = false;
 
             return field;
@@ -703,12 +614,12 @@ namespace PlenBotLogUploader
                                 IEnumerable<Player> players => players
                                     .GroupBy(x => x.Profession.ToUpper())
                                     .OrderByDescending(x => x.Count())
-                                    .Select(x => $"{(x.Count() < 10 ? " " : "") + x.Count().ToString()}`{{{x.Key}}}`")
+                                    .Select(x => $"`{(x.Count() < 10 ? " " : "") + x.Count().ToString()}`{{{x.Key}}}")
                                     .ToList(),
                                 IEnumerable<Target> enemies => enemies
                                     .GroupBy(x => x.Name.Split(' ').FirstOrDefault().ToUpper())
                                     .OrderByDescending(x => x.Count())
-                                    .Select(x => $"{(x.Count() < 10 ? " " : "") + x.Count().ToString()}`{{{x.Key}}}`")
+                                    .Select(x => $"`{(x.Count() < 10 ? " " : "") + x.Count().ToString()}`{{{x.Key}}}")
                                     .ToList(),
                                 _ => new List<string>()
                             };
@@ -728,8 +639,8 @@ namespace PlenBotLogUploader
 
                         return new DiscordApiJsonContentEmbedField()
                         {
-                            Name = $"`\n`{name}:",
-                            Value = $"```{TEAM_FORMAT_PREFIX}\n{teamSummary.Render()}``` `\n{classes} `",
+                            Name = $"\n{name}:",
+                            Value = $"```{TEAM_FORMAT_PREFIX}\n{teamSummary.Render()}``` \n{classes}",
                             Inline = true
                         };
                     }
@@ -776,7 +687,7 @@ namespace PlenBotLogUploader
                                 textTable.AddCell($"`{profession}", tableCellLeftAlign);
                                 textTable.AddCell($"{(rank < 10 ? " " : "") + rank}", tableCellCenterAlign);
                             }
-                            
+
                             textTable.AddCell($"{player.Name}");
                             textTable.AddCell($"{value.ParseAsK()}`", tableCellRightAlign);
                         }
@@ -784,7 +695,7 @@ namespace PlenBotLogUploader
                         // If rank was not incremented, nothing was added to the table.
                         if (rank == 0) return null;
 
-                        field.Name = $"`\n`{name}:";
+                        field.Name = $"{name}:";
                         field.Value = $"{textTable.Render()}";
                         field.Inline = true;
 
@@ -1049,7 +960,7 @@ namespace PlenBotLogUploader
                         if (webhook.ShowFightAwards)
                         {
                             // Add awards
-                            var awardFields = AssignAwards(reportJSON.ExtraJson.Players, reportJSON.ExtraJson.Targets);
+                            var awardFields = AssignAwards(reportJSON.ExtraJson.Players, reportJSON.ExtraJson.Targets, webhook.GoogleSheetsUrl, reportJSON.ExtraJson.SkillList, reportJSON.ExtraJson.BuffList);
                             if (awardFields?.Any() is true) rankFields.AddRange(awardFields);
                         }
 
@@ -1061,9 +972,9 @@ namespace PlenBotLogUploader
                     }
 
                     // post to discord
-                    var discordContentWvW = new DiscordApiJsonContent() 
-                    { 
-                        Embeds = [discordContentEmbed] 
+                    var discordContentWvW = new DiscordApiJsonContent()
+                    {
+                        Embeds = [discordContentEmbed]
                     };
                     discordContentWvW.Embeds[0].Fields = discordContentEmbedSquadAndPlayers;
                     var jsonContentWvWSquadAndPlayers = JsonConvert.SerializeObject(discordContentWvW);

@@ -2,12 +2,12 @@
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal sealed class Buffs
+    public sealed class Buffs
     {
         [JsonProperty("id")]
-        internal int Id { get; set; }
+        public int Id { get; set; }
 
         [JsonProperty("buffData")]
-        internal BuffData[] BuffData { get; set; }
+        public BuffData[] BuffData { get; set; }
     }
 }

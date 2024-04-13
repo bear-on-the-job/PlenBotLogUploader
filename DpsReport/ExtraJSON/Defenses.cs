@@ -2,39 +2,39 @@
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal sealed class Defenses
+    public sealed class Defenses
     {
         [JsonProperty("damageTaken")]
-        internal int DamageTaken { get; set; }
+        public int DamageTaken { get; set; }
 
         [JsonProperty("downCount")]
-        internal int DownCount { get; set; }
+        public int DownCount { get; set; }
 
         [JsonProperty("deadCount")]
-        internal int DeadCount { get; set; }
+        public int DeadCount { get; set; }
 
         [JsonProperty("damageBarrier")]
-        internal int DamageBarrier { get; set; }
+        public int DamageBarrier { get; set; }
 
         [JsonProperty("downDuration")]
-        internal float DownDuration { get; set; }
+        public float DownDuration { get; set; }
 
         [JsonProperty("blockedCount")]
-        internal float BlockedCount { get; set; }
+        public float BlockedCount { get; set; }
 
         [JsonProperty("evadedCount")]
-        internal float EvadedCount { get; set; }
+        public float EvadedCount { get; set; }
 
         [JsonProperty("missedCount")]
-        internal float MissedCount { get; set; }
+        public float MissedCount { get; set; }
 
         [JsonProperty("dodgeCount")]
-        internal float DodgeCount { get; set; }
+        public float DodgeCount { get; set; }
 
         [JsonProperty("interruptedCount")]
-        internal float InterruptedCount { get; set; }
+        public float InterruptedCount { get; set; }
 
         [JsonProperty("boonStrips")]
-        internal float BoonStrips { get; set; }
+        public float BoonStrips { get; set; }
     }
 }

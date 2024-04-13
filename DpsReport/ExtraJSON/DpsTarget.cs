@@ -2,12 +2,12 @@
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal sealed class DpsTarget
+    public sealed class DpsTarget
     {
         [JsonProperty("dps")]
-        internal int Dps { get; set; }
+        public int Dps { get; set; }
 
         [JsonProperty("damage")]
-        internal int Damage { get; set; }
+        public int Damage { get; set; }
     }
 }

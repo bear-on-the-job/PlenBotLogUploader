@@ -2,21 +2,21 @@
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal sealed class Player
+    public sealed class Player
     {
         [JsonProperty("account")]
-        internal string Account { get; set; }
+        public string Account { get; set; }
 
         [JsonProperty("group")]
-        internal int Group { get; set; }
+        public int Group { get; set; }
 
         [JsonProperty("hasCommanderTag")]
-        internal bool IsCommander { get; set; }
+        public bool IsCommander { get; set; }
 
         [JsonProperty("profession")]
-        internal string Profession { get; set; }
+        public string Profession { get; set; }
 
-        internal string ProfessionShort
+        public string ProfessionShort
         {
             get
             {
@@ -65,57 +65,57 @@ namespace PlenBotLogUploader.DpsReport.ExtraJson
         }
 
         [JsonProperty("friendlyNPC")]
-        internal bool FriendlyNpc { get; set; }
+        public bool FriendlyNpc { get; set; }
 
         [JsonProperty("notInSquad")]
-        internal bool NotInSquad { get; set; }
+        public bool NotInSquad { get; set; }
 
         [JsonProperty("support")]
-        internal PlayerSupport[] Support { get; set; }
+        public PlayerSupport[] Support { get; set; }
 
         /// <summary>
         /// Healing stats from extension
         /// </summary>
         //[JsonProperty("extHealingStats")]
-        //internal ExtHealingStats ExtHealingStats { get; set; }
+        //public ExtHealingStats ExtHealingStats { get; set; }
 
         /// <summary>
         /// Barrier stats from extension
         /// </summary>
         //[JsonProperty("extBarrierStats")]
-        //internal ExtBarrierStats ExtBarrierStats { get; set; }
+        //public ExtBarrierStats ExtBarrierStats { get; set; }
 
         [JsonProperty("name")]
-        internal string Name { get; set; }
+        public string Name { get; set; }
 
         [JsonProperty("dpsAll")]
-        internal DpsAll[] DpsAll { get; set; }
+        public DpsAll[] DpsAll { get; set; }
 
         [JsonProperty("dpsTargets")]
-        internal DpsTarget[][] DpsTargets { get; set; }
+        public DpsTarget[][] DpsTargets { get; set; }
 
         [JsonProperty("statsTargets")]
-        internal StatsTarget[][] StatsTargets { get; set; }
+        public StatsTarget[][] StatsTargets { get; set; }
 
         [JsonProperty("statsAll")]
-        internal StatsAll[] StatsAll { get; set; }
+        public StatsAll[] StatsAll { get; set; }
 
         [JsonProperty("defenses")]
-        internal Defenses[] Defenses { get; set; }
+        public Defenses[] Defenses { get; set; }
 
         [JsonProperty("extHealingStats")]
-        internal StatsHealing StatsHealing { get; set; }
+        public StatsHealing StatsHealing { get; set; }
 
         [JsonProperty("extBarrierStats")]
-        internal StatsBarrier StatsBarrier { get; set; }
+        public StatsBarrier StatsBarrier { get; set; }
 
         [JsonProperty("totalDamageDist")]
-        internal TotalDamageDist[][] TotalDamageDist { get; set; }
+        public TotalDamageDist[][] TotalDamageDist { get; set; }
 
         [JsonProperty("buffUptimes")]
-        internal BuffUptimes[] BuffUptimes { get; set; }
+        public BuffUptimes[] BuffUptimes { get; set; }
 
         [JsonProperty("targetDamageDist")]
-        internal TargetDamageDist[][][] TargetDamageDist { get; set; }
+        public TargetDamageDist[][][] TargetDamageDist { get; set; }
     }
 }

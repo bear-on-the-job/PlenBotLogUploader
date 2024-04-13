@@ -197,5 +197,11 @@ namespace PlenBotLogUploader.DiscordApi
                 ("BLADESWORN","<:bla:1225280015181156516>")
             ];
         }
+
+        /// <summary>
+        /// URL of the google sheet for custom awards
+        /// </summary>
+        [JsonProperty("googleSheetsUrl")]
+        internal string GoogleSheetsUrl { get; set; }
     }
 }

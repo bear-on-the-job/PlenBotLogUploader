@@ -93,8 +93,8 @@ namespace PlenBotLogUploader
 
         // constants
         private const int minFileSize = 8192;
-        private const string plenbotVersionFileURL = "https://raw.githubusercontent.com/Plenyx/PlenBotLogUploader/master/VERSION";
-        private const string plenbotDownloadName = "PlenBotLogUploader.exe";
+        private const string plenbotVersionFileURL = "https://raw.githubusercontent.com/bear-on-the-job/PlenBotLogUploader/master/VERSION";
+        private const string plenbotDownloadName = "PlenBotLogUploader.Bear.exe";
 
         // partials
         [GeneratedRegex(@"(?:(?:build)){1}(?:(?:\?)|(?: is))+", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
@@ -558,14 +558,14 @@ namespace PlenBotLogUploader
                     return;
                 }
                 UpdateFound = true;
-                latestRelease = await HttpClientController.GetGitHubLatestReleaseAsync("Plenyx/PlenBotLogUploader");
+                latestRelease = await HttpClientController.GetGitHubLatestReleaseAsync("bear-on-the-job/PlenBotLogUploader");
                 if (appStartup && ApplicationSettings.Current.AutoUpdate && latestRelease is not null)
                 {
                     await PerformUpdate(appStartup);
                     return;
                 }
                 AddToText($">>> New release available (r{response})");
-                AddToText(">>> Read about all the changes here: https://github.com/Plenyx/PlenBotLogUploader/releases/latest");
+                AddToText(">>> Read about all the changes here: https://github.com/bear-on-the-job/PlenBotLogUploader/releases/latest");
                 ShowBalloon("New release available for the uploader", $"If you want to update immediately, use the \"Update the uploader\" button.\nThe latest release is n. {response}.", 8500);
             }
             catch
@@ -1131,7 +1131,7 @@ namespace PlenBotLogUploader
             if (command.Equals(twitchCommandsLink.textBoxUploaderCommand.Text.ToLower()) && twitchCommandsLink.checkBoxUploaderEnable.Checked)
             {
                 AddToText("> UPLOADER COMMAND USED");
-                await chatConnect.SendChatMessageAsync(ApplicationSettings.Current.Twitch.ChannelName, $"PlenBot Log Uploader r{ApplicationSettings.Version} | https://plenbot.net/uploader/ | https://github.com/Plenyx/PlenBotLogUploader/");
+                await chatConnect.SendChatMessageAsync(ApplicationSettings.Current.Twitch.ChannelName, $"PlenBot Log Uploader r{ApplicationSettings.Version} | https://plenbot.net/uploader/ | https://github.com/bear-on-the-job/PlenBotLogUploader/");
                 return;
             }
             if (command.Equals(twitchCommandsLink.textBoxGW2Build.Text.ToLower()) && twitchCommandsLink.checkBoxGW2BuildEnable.Checked)

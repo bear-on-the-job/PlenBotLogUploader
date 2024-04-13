@@ -2,12 +2,12 @@
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal class OutgoingBarrier
+    public class OutgoingBarrier
     {
         [JsonProperty("barrier")]
-        internal long Barrier { get; set; }
+        public long Barrier { get; set; }
 
         [JsonProperty("bps")]
-        internal long BarrierPerSecond { get; set; }
+        public long BarrierPerSecond { get; set; }
     }
 }

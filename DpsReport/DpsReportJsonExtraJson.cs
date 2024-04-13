@@ -1,8 +1,10 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PlenBotLogUploader.DpsReport.ExtraJson;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace PlenBotLogUploader.DpsReport
 {
@@ -61,5 +63,37 @@ namespace PlenBotLogUploader.DpsReport
             }
             return dict;
         }
+
+        [JsonProperty("skillMap")]
+        internal JObject SkillMap { get; set; }
+
+        [JsonProperty("buffMap")]
+        internal JObject BuffMap { get; set; }
+
+        internal List<Skill> SkillList => SkillMap
+            .Properties()
+            .Select
+            (
+                p =>
+                {
+                    var skill = p.Value.ToObject<Skill>();
+                    skill.Id = int.TryParse(Regex.Match(p.Name, @"\d+")?.Value ?? string.Empty, out int id) ? id : 0;
+                    return skill;
+                }
+            )
+            .ToList();
+
+        internal List<Buff> BuffList => BuffMap
+            .Properties()
+            .Select
+            (
+                p =>
+                {
+                    var buff = p.Value.ToObject<Buff>();
+                    buff.Id = int.TryParse(Regex.Match(p.Name, @"\d+")?.Value ?? string.Empty, out int id) ? id : 0;
+                    return buff;
+                }
+            )
+            .ToList();
     }
 }

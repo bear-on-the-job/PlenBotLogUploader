@@ -3,13 +3,16 @@ using Newtonsoft.Json.Linq;
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal sealed class BuffData
+    public sealed class BuffData
     {
         [JsonProperty("uptime")]
-        internal float Uptime { get; set; }
-        
+        public float Uptime { get; set; }
+
+        [JsonProperty("presence")]
+        public float Presence { get; set; }
+
         [JsonProperty("generated")]
         // Needs to be a JObject, because the members are dynamically named, based on player names...
-        internal JObject Generated { get; set; }
+        public JObject Generated { get; set; }
     }
 }

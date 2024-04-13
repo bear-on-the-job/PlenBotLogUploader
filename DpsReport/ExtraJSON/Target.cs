@@ -2,39 +2,39 @@
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal sealed class Target
+    public sealed class Target
     {
         [JsonProperty("id")]
-        internal int Id { get; set; }
+        public int Id { get; set; }
 
         [JsonProperty("name")]
-        internal string Name { get; set; }
+        public string Name { get; set; }
 
         [JsonProperty("isFake")]
-        internal bool IsFake { get; set; }
+        public bool IsFake { get; set; }
 
         [JsonProperty("dpsAll")]
-        internal DpsAll[] DpsAll { get; set; }
+        public DpsAll[] DpsAll { get; set; }
 
         [JsonProperty("statsAll")]
-        internal StatsAll[] StatsAll { get; set; }
+        public StatsAll[] StatsAll { get; set; }
 
         [JsonProperty("defenses")]
-        internal Defenses[] Defenses { get; set; }
+        public Defenses[] Defenses { get; set; }
 
         [JsonProperty("totalHealth")]
-        internal int TotalHealth { get; set; }
+        public int TotalHealth { get; set; }
 
         [JsonProperty("healthPercentBurned")]
-        internal double HealthPercentBurned { get; set; }
+        public double HealthPercentBurned { get; set; }
 
         [JsonProperty("enemyPlayer")]
-        internal bool EnemyPlayer { get; set; }
+        public bool EnemyPlayer { get; set; }
 
         [JsonProperty("teamId")]
-        internal int TeamId { get; set; }
+        public int TeamId { get; set; }
 
         [JsonProperty("buffs")]
-        internal Buffs[] Buffs { get; set; }
+        public Buffs[] Buffs { get; set; }
     }
 }

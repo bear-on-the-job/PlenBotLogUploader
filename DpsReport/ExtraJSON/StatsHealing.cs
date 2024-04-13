@@ -3,15 +3,15 @@ using System;
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
-    internal class StatsHealing
+    public class StatsHealing
     {
         [JsonProperty("outgoingHealing")]
-        internal OutgoingHealing[] OutgoingHealing { get; set; }
+        public OutgoingHealing[] OutgoingHealing { get; set; }
 
         [JsonProperty("outgoingHealingAllies")]
-        internal OutgoingHealing[][] OutgoingHealingAllies { get; set; }
+        public OutgoingHealing[][] OutgoingHealingAllies { get; set; }
 
-        internal long TotalHealingOnSquad
+        public long TotalHealingOnSquad
         {
             get
             {
