@@ -58,6 +58,8 @@ namespace PlenBotLogUploader.DiscordApi
         //BEAR 
         [JsonProperty("includeDamageSummary")]
         internal bool IncludeDamageSummary { get; set; } = true;
+        [JsonProperty("includeDownsContributionSummary")]
+        internal bool IncludeDownsContributionSummary { get; set; } = true;
         //BEAR 
         [JsonProperty("includeHealingSummary")]
         internal bool IncludeHealingSummary { get; set; } = false;
