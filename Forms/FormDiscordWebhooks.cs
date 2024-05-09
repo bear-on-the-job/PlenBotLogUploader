@@ -998,7 +998,15 @@ namespace PlenBotLogUploader
                     discordContentWvW.Embeds[0].Fields = discordContentEmbedNone;
                     var jsonContentWvWNone = JsonConvert.SerializeObject(discordContentWvW);
 
-                    await SendLogViaWebhooks(reportJSON.Encounter.Success ?? false, reportJSON.Encounter.BossId, bossData, players, jsonContentWvWNone, jsonContentWvWSquad, jsonContentWvWPlayers, jsonContentWvWSquadAndPlayers);
+                    await SendLogViaWebhooks
+                    (
+                        reportJSON.Encounter.Success ?? false,
+                        reportJSON.Encounter.BossId,
+                        false,
+                        false,
+                        bossData, players,
+                        jsonContentWvWNone, jsonContentWvWSquad, jsonContentWvWPlayers, jsonContentWvWSquadAndPlayers
+                    );
                 }
 
                 if (allWebhooks.Count > 0)
@@ -1017,7 +1025,7 @@ namespace PlenBotLogUploader
                 var bossData = Bosses.GetBossDataFromId(reportJSON.Encounter.BossId);
                 if (bossData is not null)
                 {
-                    bossName = bossData.Name + (reportJSON.ChallengeMode ? " CM" : "");
+                    bossName = bossData.FightName(reportJSON);
                     icon = bossData.Icon;
                 }
                 var colour = (reportJSON.Encounter.Success ?? false) ? 32768 : 16711680;
@@ -1039,6 +1047,13 @@ namespace PlenBotLogUploader
                     Colour = colour,
                     TimeStamp = timestamp,
                     Thumbnail = discordContentEmbedThumbnail,
+                };
+                var discordContentEmbedSpacer = new DiscordApiJsonContentEmbed()
+                {
+                    Title = "Log summary",
+                    Description = DiscordApiJsonContent.Spacer,
+                    Colour = colour,
+                    TimeStamp = timestamp,
                 };
                 var discordContentEmbedSquadAndPlayers = new List<DiscordApiJsonContentEmbedField>();
                 var discordContentEmbedSquad = new List<DiscordApiJsonContentEmbedField>();
@@ -1071,8 +1086,8 @@ namespace PlenBotLogUploader
                     {
                         // player list
                         var playerNames = new TextTable(2, tableStyle, tableBorders);
-                        playerNames.SetColumnWidthRange(0, 21, 21);
-                        playerNames.SetColumnWidthRange(1, 20, 20);
+                        playerNames.SetColumnWidthRange(0, 23, 23);
+                        playerNames.SetColumnWidthRange(1, 23, 23);
                         playerNames.AddCell("Character");
                         playerNames.AddCell("Account name");
                         foreach (var player in reportJSON.ExtraJson.Players.Where(x => !x.FriendlyNpc).OrderBy(x => x.Name))
@@ -1103,8 +1118,8 @@ namespace PlenBotLogUploader
                             .ToArray();
                         var dpsTargetSummary = new TextTable(3, tableStyle, TableVisibleBorders.HEADER_AND_FOOTER);
                         dpsTargetSummary.SetColumnWidthRange(0, 5, 5);
-                        dpsTargetSummary.SetColumnWidthRange(1, 27, 27);
-                        dpsTargetSummary.SetColumnWidthRange(2, 8, 8);
+                        dpsTargetSummary.SetColumnWidthRange(1, 31, 31);
+                        dpsTargetSummary.SetColumnWidthRange(2, 10, 10);
                         dpsTargetSummary.AddCell("#", tableCellCenterAlign);
                         dpsTargetSummary.AddCell("Name");
                         dpsTargetSummary.AddCell("DPS", tableCellRightAlign);
@@ -1131,20 +1146,28 @@ namespace PlenBotLogUploader
                         discordContentEmbedPlayers.Add(playersEmbedField);
                     }
                 }
+
                 var discordContent = new DiscordApiJsonContent()
                 {
                     Embeds = [discordContentEmbed],
                 };
-                discordContent.Embeds[0].Fields = discordContentEmbedSquadAndPlayers;
-                var jsonContentSquadAndPlayers = JsonConvert.SerializeObject(discordContent);
-                discordContent.Embeds[0].Fields = discordContentEmbedSquad;
-                var jsonContentSquad = JsonConvert.SerializeObject(discordContent);
-                discordContent.Embeds[0].Fields = discordContentEmbedPlayers;
-                var jsonContentPlayers = JsonConvert.SerializeObject(discordContent);
                 discordContent.Embeds[0].Fields = discordContentEmbedNone;
                 var jsonContentNone = JsonConvert.SerializeObject(discordContent);
+                discordContent.Embeds.Add(discordContentEmbedSpacer);
 
-                await SendLogViaWebhooks(reportJSON.Encounter.Success ?? false, reportJSON.Encounter.BossId, bossData, players, jsonContentNone, jsonContentSquad, jsonContentPlayers, jsonContentSquadAndPlayers);
+                discordContent.Embeds[1].Fields = discordContentEmbedSquadAndPlayers;
+                var jsonContentSquadAndPlayers = JsonConvert.SerializeObject(discordContent);
+                discordContent.Embeds[1].Fields = discordContentEmbedSquad;
+                var jsonContentSquad = JsonConvert.SerializeObject(discordContent);
+                discordContent.Embeds[1].Fields = discordContentEmbedPlayers;
+                var jsonContentPlayers = JsonConvert.SerializeObject(discordContent);
+
+                await SendLogViaWebhooks(reportJSON.Encounter.Success ?? false,
+                    reportJSON.Encounter.BossId,
+                    reportJSON.ChallengeMode,
+                    reportJSON.LegendaryChallengeMode,
+                    bossData, players,
+                    jsonContentNone, jsonContentSquad, jsonContentPlayers, jsonContentSquadAndPlayers);
 
                 if (allWebhooks.Count > 0)
                 {
@@ -1153,7 +1176,7 @@ namespace PlenBotLogUploader
             }
         }
 
-        internal async Task SendLogViaWebhooks(bool success, int bossId, BossData bossData, List<LogPlayer> players, string jsonContentNone, string jsonContentSquad, string jsonContentPlayers, string jsonContentSquadAndPlayers)
+        internal async Task SendLogViaWebhooks(bool success, int bossId, bool isCm, bool isLegendaryCm, BossData bossData, List<LogPlayer> players, string jsonContentNone, string jsonContentSquad, string jsonContentPlayers, string jsonContentSquadAndPlayers)
         {
             foreach (var key in allWebhooks.Keys)
             {
@@ -1161,6 +1184,9 @@ namespace PlenBotLogUploader
                 if (!webhook.Active
                     || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnSuccessOnly) && !success)
                     || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnFailOnly) && success)
+                    || (!webhook.IncludeNormalLogs && !isCm)
+                    || (!webhook.IncludeChallengeModeLogs && isCm && !isLegendaryCm)
+                    || (!webhook.IncludeLegendaryChallengeModeLogs && isLegendaryCm)
                     || webhook.BossesDisable.Contains(bossId)
                     || (!webhook.AllowUnknownBossIds && (bossData is null))
                     || (!webhook.Team.IsSatisfied(players)))
@@ -1352,19 +1378,3 @@ namespace PlenBotLogUploader
         }
     }
 }
-
-/*
- 
- # Name                       DMG
----------------------------------
- 1 (Mir) Kaylen Moraim     781178
- 2 (Ber) M U L T I V E...  352211
- 3 (Holo) Dinky Lamarr     291170
- 4 (Spb) Iweara Battlebra  188728
- 5 (Gua) Posh Pam          179671
- 6 (Spb) Alena Starfall    126030
- 7 (Ren) Axium Rattus      102159
- 8 (Ber) Devils Alpha       97342
-
-
- */

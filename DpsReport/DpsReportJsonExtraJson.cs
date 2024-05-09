@@ -19,10 +19,10 @@ namespace PlenBotLogUploader.DpsReport
         [JsonProperty("recordedAccountBy")]
         internal string RecordedByAccountName { get; set; }
 
-        [JsonProperty("timeStart")]
+        [JsonProperty("timeStartStd")]
         internal DateTime TimeStart { get; set; }
 
-        [JsonProperty("timeEnd")]
+        [JsonProperty("timeEndStd")]
         internal DateTime TimeEnd { get; set; }
 
         [JsonProperty("duration")]
@@ -43,13 +43,28 @@ namespace PlenBotLogUploader.DpsReport
         [JsonProperty("isCM")]
         internal bool IsCm { get; set; }
 
+        [JsonProperty("isLegendaryCM")]
+        internal bool IsLegendaryCm { get; set; }
+
         [JsonProperty("targets")]
         internal Target[] Targets { get; set; }
 
         [JsonProperty("players")]
         internal Player[] Players { get; set; }
 
-        internal Target PossiblyLastTarget => Targets.OrderByDescending(x => x.TotalHealth).FirstOrDefault(x => x.HealthPercentBurned <= 98.6);
+        internal Target PossiblyLastTarget
+        {
+            get
+            {
+                if (TriggerId == (int)BossIds.Cerus)
+                {
+                    return TargetsByTotalHealth.FirstOrDefault();
+                }
+                return TargetsByTotalHealth.FirstOrDefault(x => x.HealthPercentBurned <= 98.6);
+            }
+        }
+
+        private IOrderedEnumerable<Target> TargetsByTotalHealth => Targets.OrderByDescending(x => x.TotalHealth);
 
         internal Dictionary<Player, int> GetPlayerTargetDPS()
         {
