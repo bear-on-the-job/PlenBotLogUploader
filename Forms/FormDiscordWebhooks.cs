@@ -39,15 +39,14 @@ namespace PlenBotLogUploader
             Inline = false
         };
 
-        private List<AwardDisplay> awardDisplays = new List<AwardDisplay>();
         private List<Award> awards = new List<Award>();
 
         /// <summary>
         /// Parses CSV content into award display list
         /// </summary>
-        private static List<AwardDisplay> ParseCsvToAwardDisplays(string csvContent, IEnumerable<Skill> skills, IEnumerable<Buff> buffs)
+        private static List<Award> ParseCsvToAwardProcessors(string csvContent, IEnumerable<Skill> skills, IEnumerable<Buff> buffs)
         {
-            List<AwardDisplay> awardDisplays = new List<AwardDisplay>();
+            List<Award> awardDisplays = new List<Award>();
 
             // Split the CSV content into lines
             var lines = csvContent.Split("\r\n");
@@ -62,8 +61,8 @@ namespace PlenBotLogUploader
                 var columns = lines[i].Split(',');
                 if (columns.Length < 8) continue;
 
-                // Create a new Person object and add it to the list
-                awardDisplays.Add(new AwardDisplay
+                // Create a new award and add it to the list
+                awardDisplays.Add(new Award
                 {
                     Skills = skills,
                     Buffs = buffs,
@@ -101,7 +100,7 @@ namespace PlenBotLogUploader
             var csvContent = client.GetStringAsync(csvUrl).Result;
             if (csvContent is null) return;
 
-            awardDisplays = ParseCsvToAwardDisplays(csvContent, skills, buffs);
+            awards = ParseCsvToAwardProcessors(csvContent, skills, buffs);
         }
 
         /// <summary>
@@ -112,12 +111,8 @@ namespace PlenBotLogUploader
         {
             LoadAwardDisplays(googleSheetsUrl, skills, buffs);
 
-            awards = awardDisplays
-                .Where(ad => ad.Active.Equals("yes", StringComparison.InvariantCultureIgnoreCase) || ad.Active.Equals("true", StringComparison.InvariantCultureIgnoreCase))
-                .Select(ad => new Award { Display = ad })
-                //.Select(ad => new Award { Display = ad, Processor = awardProcessors.FirstOrDefault(ap => ap.Description == ad.Description) })
-                //.Where(a => a.Processor is not null)
-                .ToList();
+            // Only process active awards
+            var awards = this.awards.Where(ad => ad.Active.Equals("yes", StringComparison.InvariantCultureIgnoreCase) || ad.Active.Equals("true", StringComparison.InvariantCultureIgnoreCase));
 
             // Run all awards to see which has most qualifiers
             var qualifiers = awards
@@ -126,28 +121,20 @@ namespace PlenBotLogUploader
                     award => new
                     {
                         Award = award,
-                        Players = players.Where(p => award.Display.Qualify(p, targets)).OrderByDescending(p => award.Display.Rank(p, targets))
+                        Players = players.Where(p => award.Qualify(p, targets)).OrderByDescending(p => award.Rank(p, targets))
                     }
                 )
                 .Where(q => q.Players.Any())
                 .ToList();
 
-            var shuffled = Shuffle(qualifiers).ToList();            
-            var legendary = shuffled
-                .Where(s => s.Award.Display.Rarity == "Legendary")
-                .ToList();
-            var epic = shuffled
-                .Where(s => s.Award.Display.Rarity == "Epic")
-                .ToList();
-            var rare = shuffled
-                .Where(s => s.Award.Display.Rarity == "Rare")
-                .ToList();
-            var common = shuffled
-                .Where(s => s.Award.Display.Rarity == "Common")
-                .ToList();
+            var shuffled = Shuffle(qualifiers).ToList();
+            var legendary = shuffled.Where(s => s.Award.Rarity == "Legendary");
+            var epic = shuffled.Where(s => s.Award.Rarity == "Epic");
+            var rare = shuffled.Where(s => s.Award.Rarity == "Rare");
+            var common = shuffled.Where(s => s.Award.Rarity == "Common");
 
             // Default the winners to those with legendary awards
-            var winners = legendary;
+            var winners = legendary.ToList();
             winners.AddRange(epic);
             winners.AddRange(rare);
             winners.AddRange(common);
@@ -157,14 +144,11 @@ namespace PlenBotLogUploader
             var fields = winners
                 .Select
                 (
-                    winner => CreateAwardField(winner.Award.Display.Name, winner.Award.Display.Description, winner.Award.Display.Emoji, winner.Award.Display.Rarity, winner.Players.FirstOrDefault())
+                    winner => CreateAwardField(winner.Award.Name, winner.Award.Description, winner.Award.Emoji, winner.Award.Rarity, winner.Players.FirstOrDefault())
                 )
                 .ToList();
 
             fields.Insert(0, FIELD_SPACER);
-            fields.Insert(0, FIELD_SPACER);
-            //fields.First().Name = "\n" + fields.First().Name;
-
             return fields;
         }
 
