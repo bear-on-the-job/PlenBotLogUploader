@@ -78,6 +78,7 @@ namespace PlenBotLogUploader
 
             // BEAR
             checkBoxIncludeDamageSummary.Checked = data?.IncludeDamageSummary ?? true;
+            checkBoxIncludeDownsContributionSummary.Checked = data?.IncludeDownsContributionSummary ?? false;
             checkBoxIncludeHealingSummary.Checked = data?.IncludeHealingSummary ?? false;
             checkBoxIncludeBarrierSummary.Checked = data?.IncludeBarrierSummary ?? false;
             //checkBoxCombineHealingBarrier.Checked = data?.CombineHealingBarrier ?? false;
@@ -135,6 +136,7 @@ namespace PlenBotLogUploader
 
                     // BEAR
                     IncludeDamageSummary = checkBoxIncludeDamageSummary.Checked,
+                    IncludeDownsContributionSummary = checkBoxIncludeDownsContributionSummary.Checked,
                     IncludeHealingSummary = checkBoxIncludeHealingSummary.Checked,
                     IncludeBarrierSummary = checkBoxIncludeBarrierSummary.Checked,
                     //CombineHealingBarrier = checkBoxCombineHealingBarrier.Checked,
@@ -171,6 +173,7 @@ namespace PlenBotLogUploader
 
             // BEAR
             webhook.IncludeDamageSummary = checkBoxIncludeDamageSummary.Checked;
+            webhook.IncludeDownsContributionSummary = checkBoxIncludeDownsContributionSummary.Checked;
             webhook.IncludeHealingSummary = checkBoxIncludeHealingSummary.Checked;
             webhook.IncludeBarrierSummary = checkBoxIncludeBarrierSummary.Checked;
             //webhook.CombineHealingBarrier = checkBoxCombineHealingBarrier.Checked;

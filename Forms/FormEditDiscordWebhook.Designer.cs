@@ -66,6 +66,7 @@
             checkBoxIncludeHealingSummary = new System.Windows.Forms.CheckBox();
             checkBoxIncludeBarrierSummary = new System.Windows.Forms.CheckBox();
             checkBoxIncludeDamageSummary = new System.Windows.Forms.CheckBox();
+            checkBoxIncludeDownsContributionSummary = new System.Windows.Forms.CheckBox();
             groupBox2 = new System.Windows.Forms.GroupBox();
             textBoxGoogleSheetsUrl = new System.Windows.Forms.TextBox();
             label2 = new System.Windows.Forms.Label();
@@ -367,6 +368,7 @@
             // 
             // groupBox1
             // 
+            groupBox1.Controls.Add(checkBoxIncludeDownsContributionSummary);
             groupBox1.Controls.Add(checkBoxShowFightAwards);
             groupBox1.Controls.Add(button1);
             groupBox1.Controls.Add(checkBoxIncludeOpponentIcons);
@@ -521,6 +523,16 @@
             checkBoxIncludeDamageSummary.UseVisualStyleBackColor = true;
             checkBoxIncludeDamageSummary.CheckedChanged += checkBoxIncludeDamageSummary_CheckedChanged;
             // 
+            // checkBoxIncludeDownsContributionSummary
+            // 
+            checkBoxIncludeDownsContributionSummary.AutoSize = true;
+            checkBoxIncludeDownsContributionSummary.Location = new System.Drawing.Point(201, 24);
+            checkBoxIncludeDownsContributionSummary.Name = "checkBoxIncludeDownsContributionSummary";
+            checkBoxIncludeDownsContributionSummary.Size = new System.Drawing.Size(83, 19);
+            checkBoxIncludeDownsContributionSummary.TabIndex = 11;
+            checkBoxIncludeDownsContributionSummary.Text = "Include Downs Contribution Summary";
+            checkBoxIncludeDownsContributionSummary.UseVisualStyleBackColor = true;
+            // 
             // groupBox2
             // 
             groupBox2.Controls.Add(textBoxGoogleSheetsUrl);
@@ -632,5 +644,6 @@
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.TextBox textBoxGoogleSheetsUrl;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.CheckBox checkBoxIncludeDownsContributionSummary;
     }
 }

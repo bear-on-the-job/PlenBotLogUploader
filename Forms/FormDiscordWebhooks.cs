@@ -777,6 +777,19 @@ namespace PlenBotLogUploader
                             if (damageField is not null) rankFields.Add(damageField);
                         }
 
+                        if (webhook.IncludeDownsContributionSummary)
+                        {
+                            // downs contribution summary
+                            var downsContributionStats = reportJSON.ExtraJson.Players
+                                .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.StatsTargets.Sum(y => y[0].DownContribution) > 0))
+                                .OrderByDescending(x => x.StatsTargets.Sum(y => y[0].DownContribution))
+                                .Take(webhook.MaxPlayers)
+                                .ToArray();
+
+                            var downsContributionField = CreateRankField("Downs Contribution", downsContributionStats, p => p.StatsTargets.Sum(y => y[0].DownContribution));
+                            if (downsContributionField is not null) rankFields.Add(downsContributionField);
+                        }
+
                         if (webhook.IncludeHealingSummary)
                         {
                             // healing summary
