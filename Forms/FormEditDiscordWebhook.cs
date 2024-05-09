@@ -90,6 +90,9 @@ namespace PlenBotLogUploader
             //checkBoxShowDPSColumn.Checked = data?.ShowDpsColumn ?? true;
             checkBoxIncludeOpponentIcons.Checked = data?.ShowClassIcons ?? true;
             checkBoxShowFightAwards.Checked = data?.ShowFightAwards ?? true;
+            checkBoxIncludeNormalLogs.Checked = data?.IncludeNormalLogs ?? true;
+            checkBoxIncludeChallengeModeLogs.Checked = data?.IncludeChallengeModeLogs ?? true;
+            checkBoxIncludeLegendaryChallengeModeLogs.Checked = data?.IncludeLegendaryChallengeModeLogs ?? true;
         }
 
         private void FormEditDiscordWebhook_FormClosing(object sender, FormClosingEventArgs e)
@@ -147,7 +150,10 @@ namespace PlenBotLogUploader
                     MaxPlayers = int.Parse(comboBoxMaxPlayers.SelectedItem.ToString()),
                     ShowDpsColumn = false, // checkBoxShowDPSColumn.Checked,
                     ShowClassIcons = checkBoxIncludeOpponentIcons.Checked,
-                    ShowFightAwards = checkBoxShowFightAwards.Checked
+                    ShowFightAwards = checkBoxShowFightAwards.Checked,
+                    IncludeNormalLogs = checkBoxIncludeNormalLogs.Checked,
+                    IncludeChallengeModeLogs = checkBoxIncludeChallengeModeLogs.Checked,
+                    IncludeLegendaryChallengeModeLogs = checkBoxIncludeLegendaryChallengeModeLogs.Checked,
                 };
 
                 DiscordWebhooks.All[reservedId].ResetEmojis();
@@ -186,6 +192,9 @@ namespace PlenBotLogUploader
             webhook.ShowClassIcons = checkBoxIncludeOpponentIcons.Checked;
             webhook.ShowFightAwards = checkBoxShowFightAwards.Checked;
 
+            webhook.IncludeNormalLogs = checkBoxIncludeNormalLogs.Checked;
+            webhook.IncludeChallengeModeLogs = checkBoxIncludeChallengeModeLogs.Checked;
+            webhook.IncludeLegendaryChallengeModeLogs = checkBoxIncludeLegendaryChallengeModeLogs.Checked;
             discordPingLink.listViewDiscordWebhooks.Items[discordPingLink.listViewDiscordWebhooks.Items.IndexOfKey(reservedId.ToString())] = new ListViewItem()
             {
                 Name = reservedId.ToString(),

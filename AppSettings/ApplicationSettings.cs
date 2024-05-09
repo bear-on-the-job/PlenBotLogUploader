@@ -9,7 +9,7 @@ namespace PlenBotLogUploader.AppSettings
     internal sealed class ApplicationSettings
     {
         #region application version
-        internal static int Version => 87;
+        internal static int Version => 89;
         #endregion
 
         #region load & save functionality
@@ -101,6 +101,9 @@ namespace PlenBotLogUploader.AppSettings
 
         [JsonProperty("minimiseToTry")]
         internal bool MinimiseToTray { get; set; } = true;
+
+        [JsonProperty("closeToTry")]
+        internal bool CloseToTray { get; set; } = false;
 
         [JsonProperty("session")]
         internal ApplicationSettingsSession Session { get; set; } = new ApplicationSettingsSession();

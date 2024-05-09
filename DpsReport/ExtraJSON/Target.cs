@@ -23,7 +23,7 @@ namespace PlenBotLogUploader.DpsReport.ExtraJson
         public Defenses[] Defenses { get; set; }
 
         [JsonProperty("totalHealth")]
-        public int TotalHealth { get; set; }
+        public long TotalHealth { get; set; }
 
         [JsonProperty("healthPercentBurned")]
         public double HealthPercentBurned { get; set; }

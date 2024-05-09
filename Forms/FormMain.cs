@@ -85,11 +85,12 @@ namespace PlenBotLogUploader
         private bool lastLogBossCM = false;
         private bool _updateFound = false;
         private GitHubReleaseLatest latestRelease = null;
-        private Dictionary<string, string> defaultPostData = new()
+        private readonly Dictionary<string, string> defaultPostData = new()
         {
             { "generator", "ei" },
             { "json", "1" },
         };
+        private bool bypassCloseToTray = false;
 
         // constants
         private const int minFileSize = 8192;
@@ -147,7 +148,7 @@ namespace PlenBotLogUploader
                 comboBoxMaxUploads.Text = ApplicationSettings.Current.MaxConcurrentUploads.ToString();
                 if (ApplicationSettings.Current.FirstApplicationRun)
                 {
-                    MessageBox.Show("It looks like this is the first time you are running this program.\nIf you have any issues feel free to contact me directly via Twitch, Discord (@Plenyx#1029) or via GitHub!\n\nPlenyx", "Thank you for using PlenBotLogUploader", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("It looks like this is the first time you are running this program.\nIf you have any issues feel free to contact me directly via Twitch, Discord (@plenyx) or via GitHub!\n\nPlenyx", "Thank you for using PlenBotLogUploader", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     var arcFolder = $"{Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}\\Guild Wars 2\\addons\\arcdps\\arcdps.cbtlogs\\";
                     if (Directory.Exists(arcFolder))
                     {
@@ -260,6 +261,7 @@ namespace PlenBotLogUploader
                         ApplicationSettings.Current.Gw2Location = "";
                     }
                 }
+                checkBoxCloseToTrayIcon.Checked = ApplicationSettings.Current.CloseToTray;
                 twitchCommandsLink.checkBoxGW2BuildEnable.Checked = ApplicationSettings.Current.Twitch.Commands.BuildEnabled;
                 twitchCommandsLink.textBoxGW2Build.Text = ApplicationSettings.Current.Twitch.Commands.BuildCommand;
                 twitchCommandsLink.checkBoxUploaderEnable.Checked = ApplicationSettings.Current.Twitch.Commands.UploaderEnabled;
@@ -342,6 +344,7 @@ namespace PlenBotLogUploader
                 checkBoxUsePolling.CheckedChanged += CheckBoxUsePolling_CheckedChanged;
                 comboBoxMaxUploads.SelectedIndexChanged += ComboBoxMaxUploads_SelectedIndexChanged;
                 checkBoxAutoUpdate.CheckedChanged += CheckBoxAutoUpdate_CheckedChanged;
+                checkBoxCloseToTrayIcon.CheckedChanged += CheckBoxCloseToTrayIcon_CheckedChanged;
                 logSessionLink.checkBoxSupressWebhooks.CheckedChanged += logSessionLink.CheckBoxSupressWebhooks_CheckedChanged;
                 logSessionLink.checkBoxOnlySuccess.CheckedChanged += logSessionLink.CheckBoxOnlySuccess_CheckedChanged;
                 logSessionLink.checkBoxSaveToFile.CheckedChanged += logSessionLink.CheckBoxSaveToFile_CheckedChanged;
@@ -595,6 +598,7 @@ namespace PlenBotLogUploader
                 Invoke(ExitApp);
                 return;
             }
+            bypassCloseToTray = true;
             Close();
             Application.Exit();
         }
@@ -741,7 +745,8 @@ namespace PlenBotLogUploader
                     using var responseMessage = await HttpClientController.PostAsync(CreateDPSReportLink(), content);
                     if (!responseMessage.IsSuccessStatusCode)
                     {
-                        if ((int)responseMessage.StatusCode == 429)
+                        var statusCode = (int)responseMessage.StatusCode;
+                        if ((statusCode == 408) || (statusCode == 429))
                         {
                             AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report responded with Too-Many-Logs-Per-Minute error (429). Log will be reuploaded in 15 minutes.");
                             LogReuploader.FailedLogs.Add(file);
@@ -1360,7 +1365,7 @@ namespace PlenBotLogUploader
             buttonOpenLogs.Enabled = true;
         }
 
-        private void CheckBoxUsePolling_CheckedChanged(object sender, System.EventArgs e)
+        private void CheckBoxUsePolling_CheckedChanged(object sender, EventArgs e)
         {
             watcher.ChangeMode(checkBoxUsePolling.Checked ? ArcLogsChangeObserverMode.Polling : default);
 
@@ -1417,7 +1422,11 @@ namespace PlenBotLogUploader
 
         private void ToolStripMenuItemUploadLogs_CheckedChanged(object sender, EventArgs e) => checkBoxUploadLogs.Checked = toolStripMenuItemUploadLogs.Checked;
 
-        private void ToolStripMenuItemExit_Click(object sender, EventArgs e) => Close();
+        private void ToolStripMenuItemExit_Click(object sender, EventArgs e)
+        {
+            bypassCloseToTray = true;
+            Close();
+        }
 
         private void ToolStripMenuItemPostToTwitch_CheckedChanged(object sender, EventArgs e) => checkBoxPostToTwitch.Checked = toolStripMenuItemPostToTwitch.Checked;
 
@@ -1654,6 +1663,21 @@ namespace PlenBotLogUploader
         {
             ApplicationSettings.Current.Upload.PostLogsToTwitchOnlyWithStreamingSoftware = checkBoxOnlyWhenStreamSoftwareRunning.Checked;
             ApplicationSettings.Current.Save();
+        }
+
+        private void CheckBoxCloseToTrayIcon_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplicationSettings.Current.CloseToTray = checkBoxCloseToTrayIcon.Checked;
+            ApplicationSettings.Current.Save();
+        }
+
+        private void FormMain_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (ApplicationSettings.Current.CloseToTray && !bypassCloseToTray)
+            {
+                WindowState = FormWindowState.Minimized;
+                e.Cancel = true;
+            }
         }
         #endregion
     }

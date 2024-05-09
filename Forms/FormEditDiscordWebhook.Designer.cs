@@ -54,6 +54,7 @@
             radioButtonLogSummarySquad = new System.Windows.Forms.RadioButton();
             radioButtonLogSummaryNone = new System.Windows.Forms.RadioButton();
             groupBox1 = new System.Windows.Forms.GroupBox();
+            checkBoxIncludeDownsContributionSummary = new System.Windows.Forms.CheckBox();
             checkBoxShowFightAwards = new System.Windows.Forms.CheckBox();
             button1 = new System.Windows.Forms.Button();
             checkBoxIncludeOpponentIcons = new System.Windows.Forms.CheckBox();
@@ -66,10 +67,13 @@
             checkBoxIncludeHealingSummary = new System.Windows.Forms.CheckBox();
             checkBoxIncludeBarrierSummary = new System.Windows.Forms.CheckBox();
             checkBoxIncludeDamageSummary = new System.Windows.Forms.CheckBox();
-            checkBoxIncludeDownsContributionSummary = new System.Windows.Forms.CheckBox();
             groupBox2 = new System.Windows.Forms.GroupBox();
             textBoxGoogleSheetsUrl = new System.Windows.Forms.TextBox();
             label2 = new System.Windows.Forms.Label();
+            groupBoxIncludeCheckboxes = new System.Windows.Forms.GroupBox();
+            checkBoxIncludeLegendaryChallengeModeLogs = new System.Windows.Forms.CheckBox();
+            checkBoxIncludeChallengeModeLogs = new System.Windows.Forms.CheckBox();
+            checkBoxIncludeNormalLogs = new System.Windows.Forms.CheckBox();
             groupBoxWebhookInfo.SuspendLayout();
             groupBoxBossesEnable.SuspendLayout();
             groupBoxConditionalPost.SuspendLayout();
@@ -77,6 +81,7 @@
             groupBoxLogSummaries.SuspendLayout();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
+            groupBoxIncludeCheckboxes.SuspendLayout();
             SuspendLayout();
             // 
             // labelName
@@ -122,7 +127,7 @@
             checkedListBoxBossesEnable.Location = new System.Drawing.Point(7, 22);
             checkedListBoxBossesEnable.Margin = new System.Windows.Forms.Padding(4);
             checkedListBoxBossesEnable.Name = "checkedListBoxBossesEnable";
-            checkedListBoxBossesEnable.Size = new System.Drawing.Size(442, 630);
+            checkedListBoxBossesEnable.Size = new System.Drawing.Size(442, 702);
             checkedListBoxBossesEnable.TabIndex = 6;
             // 
             // groupBoxWebhookInfo
@@ -154,7 +159,7 @@
             groupBoxBossesEnable.Margin = new System.Windows.Forms.Padding(4);
             groupBoxBossesEnable.Name = "groupBoxBossesEnable";
             groupBoxBossesEnable.Padding = new System.Windows.Forms.Padding(4);
-            groupBoxBossesEnable.Size = new System.Drawing.Size(458, 726);
+            groupBoxBossesEnable.Size = new System.Drawing.Size(458, 797);
             groupBoxBossesEnable.TabIndex = 8;
             groupBoxBossesEnable.TabStop = false;
             groupBoxBossesEnable.Text = "Only upload for selected bosses";
@@ -162,7 +167,7 @@
             // checkBoxAllowUnknownBossIds
             // 
             checkBoxAllowUnknownBossIds.AutoSize = true;
-            checkBoxAllowUnknownBossIds.Location = new System.Drawing.Point(9, 663);
+            checkBoxAllowUnknownBossIds.Location = new System.Drawing.Point(7, 740);
             checkBoxAllowUnknownBossIds.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             checkBoxAllowUnknownBossIds.Name = "checkBoxAllowUnknownBossIds";
             checkBoxAllowUnknownBossIds.Size = new System.Drawing.Size(256, 19);
@@ -172,7 +177,7 @@
             // 
             // buttonUnSelectAllGolems
             // 
-            buttonUnSelectAllGolems.Location = new System.Drawing.Point(318, 690);
+            buttonUnSelectAllGolems.Location = new System.Drawing.Point(316, 767);
             buttonUnSelectAllGolems.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAllGolems.Name = "buttonUnSelectAllGolems";
             buttonUnSelectAllGolems.Size = new System.Drawing.Size(63, 26);
@@ -183,7 +188,7 @@
             // 
             // buttonUnSelectWvW
             // 
-            buttonUnSelectWvW.Location = new System.Drawing.Point(388, 690);
+            buttonUnSelectWvW.Location = new System.Drawing.Point(386, 767);
             buttonUnSelectWvW.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectWvW.Name = "buttonUnSelectWvW";
             buttonUnSelectWvW.Size = new System.Drawing.Size(63, 26);
@@ -194,7 +199,7 @@
             // 
             // buttonUnSelectAllFractals
             // 
-            buttonUnSelectAllFractals.Location = new System.Drawing.Point(178, 690);
+            buttonUnSelectAllFractals.Location = new System.Drawing.Point(176, 767);
             buttonUnSelectAllFractals.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAllFractals.Name = "buttonUnSelectAllFractals";
             buttonUnSelectAllFractals.Size = new System.Drawing.Size(63, 26);
@@ -205,7 +210,7 @@
             // 
             // buttonUnSelectAllStrikes
             // 
-            buttonUnSelectAllStrikes.Location = new System.Drawing.Point(248, 690);
+            buttonUnSelectAllStrikes.Location = new System.Drawing.Point(246, 767);
             buttonUnSelectAllStrikes.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAllStrikes.Name = "buttonUnSelectAllStrikes";
             buttonUnSelectAllStrikes.Size = new System.Drawing.Size(63, 26);
@@ -216,7 +221,7 @@
             // 
             // buttonUnSelectAllRaids
             // 
-            buttonUnSelectAllRaids.Location = new System.Drawing.Point(108, 690);
+            buttonUnSelectAllRaids.Location = new System.Drawing.Point(106, 767);
             buttonUnSelectAllRaids.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAllRaids.Name = "buttonUnSelectAllRaids";
             buttonUnSelectAllRaids.Size = new System.Drawing.Size(63, 26);
@@ -227,7 +232,7 @@
             // 
             // buttonUnSelectAll
             // 
-            buttonUnSelectAll.Location = new System.Drawing.Point(7, 690);
+            buttonUnSelectAll.Location = new System.Drawing.Point(5, 767);
             buttonUnSelectAll.Margin = new System.Windows.Forms.Padding(4);
             buttonUnSelectAll.Name = "buttonUnSelectAll";
             buttonUnSelectAll.Size = new System.Drawing.Size(94, 26);
@@ -381,7 +386,7 @@
             groupBox1.Controls.Add(checkBoxIncludeHealingSummary);
             groupBox1.Controls.Add(checkBoxIncludeBarrierSummary);
             groupBox1.Controls.Add(checkBoxIncludeDamageSummary);
-            groupBox1.Location = new System.Drawing.Point(14, 380);
+            groupBox1.Location = new System.Drawing.Point(14, 451);
             groupBox1.Margin = new System.Windows.Forms.Padding(4);
             groupBox1.Name = "groupBox1";
             groupBox1.Padding = new System.Windows.Forms.Padding(4);
@@ -389,6 +394,16 @@
             groupBox1.TabIndex = 10;
             groupBox1.TabStop = false;
             groupBox1.Text = "Player report information";
+            // 
+            // checkBoxIncludeDownsContributionSummary
+            // 
+            checkBoxIncludeDownsContributionSummary.AutoSize = true;
+            checkBoxIncludeDownsContributionSummary.Location = new System.Drawing.Point(201, 24);
+            checkBoxIncludeDownsContributionSummary.Name = "checkBoxIncludeDownsContributionSummary";
+            checkBoxIncludeDownsContributionSummary.Size = new System.Drawing.Size(229, 19);
+            checkBoxIncludeDownsContributionSummary.TabIndex = 11;
+            checkBoxIncludeDownsContributionSummary.Text = "Include Downs Contribution Summary";
+            checkBoxIncludeDownsContributionSummary.UseVisualStyleBackColor = true;
             // 
             // checkBoxShowFightAwards
             // 
@@ -523,21 +538,11 @@
             checkBoxIncludeDamageSummary.UseVisualStyleBackColor = true;
             checkBoxIncludeDamageSummary.CheckedChanged += checkBoxIncludeDamageSummary_CheckedChanged;
             // 
-            // checkBoxIncludeDownsContributionSummary
-            // 
-            checkBoxIncludeDownsContributionSummary.AutoSize = true;
-            checkBoxIncludeDownsContributionSummary.Location = new System.Drawing.Point(201, 24);
-            checkBoxIncludeDownsContributionSummary.Name = "checkBoxIncludeDownsContributionSummary";
-            checkBoxIncludeDownsContributionSummary.Size = new System.Drawing.Size(83, 19);
-            checkBoxIncludeDownsContributionSummary.TabIndex = 11;
-            checkBoxIncludeDownsContributionSummary.Text = "Include Downs Contribution Summary";
-            checkBoxIncludeDownsContributionSummary.UseVisualStyleBackColor = true;
-            // 
             // groupBox2
             // 
             groupBox2.Controls.Add(textBoxGoogleSheetsUrl);
             groupBox2.Controls.Add(label2);
-            groupBox2.Location = new System.Drawing.Point(14, 667);
+            groupBox2.Location = new System.Drawing.Point(14, 738);
             groupBox2.Margin = new System.Windows.Forms.Padding(4);
             groupBox2.Name = "groupBox2";
             groupBox2.Padding = new System.Windows.Forms.Padding(4);
@@ -564,13 +569,58 @@
             label2.TabIndex = 0;
             label2.Text = "Google Sheets URL:";
             // 
+            // groupBoxIncludeCheckboxes
+            // 
+            groupBoxIncludeCheckboxes.Controls.Add(checkBoxIncludeLegendaryChallengeModeLogs);
+            groupBoxIncludeCheckboxes.Controls.Add(checkBoxIncludeChallengeModeLogs);
+            groupBoxIncludeCheckboxes.Controls.Add(checkBoxIncludeNormalLogs);
+            groupBoxIncludeCheckboxes.Location = new System.Drawing.Point(14, 381);
+            groupBoxIncludeCheckboxes.Margin = new System.Windows.Forms.Padding(5);
+            groupBoxIncludeCheckboxes.Name = "groupBoxIncludeCheckboxes";
+            groupBoxIncludeCheckboxes.Padding = new System.Windows.Forms.Padding(5);
+            groupBoxIncludeCheckboxes.Size = new System.Drawing.Size(473, 63);
+            groupBoxIncludeCheckboxes.TabIndex = 10;
+            groupBoxIncludeCheckboxes.TabStop = false;
+            groupBoxIncludeCheckboxes.Text = "Include all ...";
+            // 
+            // checkBoxIncludeLegendaryChallengeModeLogs
+            // 
+            checkBoxIncludeLegendaryChallengeModeLogs.AutoSize = true;
+            checkBoxIncludeLegendaryChallengeModeLogs.Location = new System.Drawing.Point(330, 28);
+            checkBoxIncludeLegendaryChallengeModeLogs.Name = "checkBoxIncludeLegendaryChallengeModeLogs";
+            checkBoxIncludeLegendaryChallengeModeLogs.Size = new System.Drawing.Size(125, 19);
+            checkBoxIncludeLegendaryChallengeModeLogs.TabIndex = 2;
+            checkBoxIncludeLegendaryChallengeModeLogs.Text = "legendary CM logs";
+            checkBoxIncludeLegendaryChallengeModeLogs.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxIncludeChallengeModeLogs
+            // 
+            checkBoxIncludeChallengeModeLogs.AutoSize = true;
+            checkBoxIncludeChallengeModeLogs.Location = new System.Drawing.Point(194, 28);
+            checkBoxIncludeChallengeModeLogs.Name = "checkBoxIncludeChallengeModeLogs";
+            checkBoxIncludeChallengeModeLogs.Size = new System.Drawing.Size(70, 19);
+            checkBoxIncludeChallengeModeLogs.TabIndex = 1;
+            checkBoxIncludeChallengeModeLogs.Text = "CM logs";
+            checkBoxIncludeChallengeModeLogs.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxIncludeNormalLogs
+            // 
+            checkBoxIncludeNormalLogs.AutoSize = true;
+            checkBoxIncludeNormalLogs.Location = new System.Drawing.Point(11, 28);
+            checkBoxIncludeNormalLogs.Name = "checkBoxIncludeNormalLogs";
+            checkBoxIncludeNormalLogs.Size = new System.Drawing.Size(123, 19);
+            checkBoxIncludeNormalLogs.TabIndex = 0;
+            checkBoxIncludeNormalLogs.Text = "normal mode logs";
+            checkBoxIncludeNormalLogs.UseVisualStyleBackColor = true;
+            // 
             // FormEditDiscordWebhook
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             BackColor = System.Drawing.Color.White;
-            ClientSize = new System.Drawing.Size(968, 754);
+            ClientSize = new System.Drawing.Size(968, 822);
             Controls.Add(groupBox2);
+            Controls.Add(groupBoxIncludeCheckboxes);
             Controls.Add(groupBoxLogSummaries);
             Controls.Add(groupBox1);
             Controls.Add(groupBoxTeam);
@@ -598,6 +648,8 @@
             groupBox1.PerformLayout();
             groupBox2.ResumeLayout(false);
             groupBox2.PerformLayout();
+            groupBoxIncludeCheckboxes.ResumeLayout(false);
+            groupBoxIncludeCheckboxes.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -645,5 +697,9 @@
         private System.Windows.Forms.TextBox textBoxGoogleSheetsUrl;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.CheckBox checkBoxIncludeDownsContributionSummary;
+        private System.Windows.Forms.GroupBox groupBoxIncludeCheckboxes;
+        private System.Windows.Forms.CheckBox checkBoxIncludeLegendaryChallengeModeLogs;
+        private System.Windows.Forms.CheckBox checkBoxIncludeChallengeModeLogs;
+        private System.Windows.Forms.CheckBox checkBoxIncludeNormalLogs;
     }
 }
