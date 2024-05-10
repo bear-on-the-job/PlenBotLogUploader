@@ -19,6 +19,11 @@ using static System.Net.WebRequestMethods;
 
 namespace PlenBotLogUploader
 {
+    public class DiscordSizeException : Exception
+    {
+        public DiscordSizeException(string message) : base(message) { }
+    }
+
     public partial class FormDiscordWebhooks : Form
     {
         private const int RED_TEAM = 705;
@@ -496,23 +501,514 @@ namespace PlenBotLogUploader
             DiscordWebhooks.SaveToJson(allWebhooks, DiscordWebhooks.JsonFileLocation);
         }
 
+        // Private method to create the Discord fields for each team (both friendly squad and enemies)
+        DiscordApiJsonContentEmbedField CreateTeamField<T>(DiscordWebhookData webhook, string name, IEnumerable<T> team)
+        {
+            var teamCount = team.Count();
+            var teamDamage = team switch
+            {
+                IEnumerable<Player> players => players.Select(x => x.DpsTargets.Sum(y => y.Sum(z => z.Damage))).Sum(),
+                IEnumerable<Target> enemies => enemies.Select(x => x.DpsAll[0].Damage).Sum(),
+                _ => 0
+            };
+            var teamDps = team switch
+            {
+                IEnumerable<Player> players => players.Select(x => x.DpsTargets.Sum(y => y.Sum(z => z.Dps))).Sum(),
+                IEnumerable<Target> enemies => enemies.Select(x => x.DpsAll[0].Dps).Sum(),
+                _ => 0
+            };
+            var teamDowns = team switch
+            {
+                IEnumerable<Player> players => players.Select(x => x.Defenses[0].DownCount).Sum(),
+                IEnumerable<Target> enemies => enemies.Select(x => x.Defenses[0].DownCount).Sum(),
+                _ => 0
+            };
+            var teamDeaths = team switch
+            {
+                IEnumerable<Player> players => players.Select(x => x.Defenses[0].DeadCount).Sum(),
+                IEnumerable<Target> enemies => enemies.Select(x => x.Defenses[0].DeadCount).Sum(),
+                _ => 0
+            };
+
+            var teamSummary = new TextTable(2, TableBordersStyle.BLANKS, TableVisibleBorders.NONE);
+            teamSummary.SetColumnWidthRange(0, 8, 8);
+            teamSummary.SetColumnWidthRange(1, 15, 15);
+
+            teamSummary.AddCell("Count:", tableCellLeftAlign);
+            teamSummary.AddCell($"{teamCount}", tableCellLeftAlign);
+
+            teamSummary.AddCell("DMG:", tableCellLeftAlign);
+            teamSummary.AddCell($"{teamDamage.ParseAsK()}", tableCellLeftAlign);
+
+            teamSummary.AddCell("DPS:", tableCellLeftAlign);
+            teamSummary.AddCell($"{teamDps.ParseAsK()}", tableCellLeftAlign);
+
+            teamSummary.AddCell("Downs:", tableCellLeftAlign);
+            teamSummary.AddCell($"{teamDowns}", tableCellLeftAlign);
+
+            teamSummary.AddCell("Deaths:", tableCellLeftAlign);
+            teamSummary.AddCell($"{teamDeaths}", tableCellLeftAlign);
+
+            var classes = string.Empty;
+
+            if (webhook.ShowClassIcons && webhook.ClassEmojis?.Any() is true)
+            {
+                var teamClasses = team switch
+                {
+                    IEnumerable<Player> players => players
+                        .GroupBy(x => x.Profession.ToUpper())
+                        .OrderByDescending(x => x.Count())
+                        .Select(x => $"`{(x.Count() < 10 ? " " : "") + x.Count().ToString()}`{{{x.Key}}}")
+                        .ToList(),
+                    IEnumerable<Target> enemies => enemies
+                        .GroupBy(x => x.Name.Split(' ').FirstOrDefault().ToUpper())
+                        .OrderByDescending(x => x.Count())
+                        .Select(x => $"`{(x.Count() < 10 ? " " : "") + x.Count().ToString()}`{{{x.Key}}}")
+                        .ToList(),
+                    _ => new List<string>()
+                };
+
+                var emojiPerLine = 4;
+                var stringBuilder = new StringBuilder();
+                for (int i = 0; i < teamClasses.Count(); i++)
+                {
+                    if (i > 0 && i % emojiPerLine == 0)
+                        stringBuilder.Append("\n"); // Add a newline
+
+                    stringBuilder.Append(teamClasses.ElementAt(i));
+                }
+
+                classes = stringBuilder.ToString();
+            }
+
+            return new DiscordApiJsonContentEmbedField()
+            {
+                Name = $"\n{name}:",
+                Value = $"```{TEAM_FORMAT_PREFIX}\n{teamSummary.Render()}``` \n{classes}",
+                Inline = true
+            };
+        }
+
+        // Private method to create the formatted rank fields for each category.
+        DiscordApiJsonContentEmbedField CreateRankField(DiscordWebhookData webhook, string name, IEnumerable<Player> players, Func<Player, int> getValue)
+        {
+            var professionReplacement = '@';
+            var field = new DiscordApiJsonContentEmbedField();
+            var textTable = new TextTable(4, TableBordersStyle.BLANKS, TableVisibleBorders.NONE);
+            var useEmoji = webhook.ShowClassIcons && (webhook.ClassEmojis?.Any() is true);
+
+            if (useEmoji)
+            {
+                textTable.SetColumnWidthRange(0, 1, 1);
+                textTable.SetColumnWidthRange(1, 4, 4);
+                textTable.SetColumnWidthRange(2, 18, 18);
+                textTable.SetColumnWidthRange(3, 10, 10);
+            }
+            else
+            {
+                textTable.SetColumnWidthRange(0, 7, 7);
+                textTable.SetColumnWidthRange(1, 4, 4);
+                textTable.SetColumnWidthRange(2, 14, 14);
+                textTable.SetColumnWidthRange(3, 10, 10);
+            }
+
+            var rank = 0;
+            foreach (var player in players.Where(p => getValue(p) > 0))
+            {
+                var value = getValue(player);
+                var profession = $"({player.ProfessionShort})";
+
+                rank++;
+
+                if (useEmoji)
+                {
+                    var index = webhook.ClassEmojis.FindIndex(x => x.className.Equals(player.Profession, StringComparison.InvariantCultureIgnoreCase));
+                    textTable.AddCell(professionReplacement.ToString(), tableCellLeftAlign);
+                    textTable.AddCell($"`{(rank < 10 ? " " : "") + rank}", tableCellCenterAlign);
+                }
+                else
+                {
+                    textTable.AddCell($"`{profession}", tableCellLeftAlign);
+                    textTable.AddCell($"{(rank < 10 ? " " : "") + rank}", tableCellCenterAlign);
+                }
+
+                textTable.AddCell($"{player.Name}");
+                textTable.AddCell($"{value.ParseAsK()}`", tableCellRightAlign);
+            }
+
+            // If rank was not incremented, nothing was added to the table.
+            if (rank == 0) return null;
+
+            field.Name = $"{name}:";
+            field.Value = $"{textTable.Render()}";
+            field.Inline = true;
+
+            var emojis = players.Select(p => webhook?.ClassEmojis?.Find(x => x.className.Equals(p.Profession, StringComparison.InvariantCultureIgnoreCase)).emojiCode ?? NO_EMOJI).ToList();
+
+            field.Value = ReplaceCharWithStrings(field.Value, professionReplacement, emojis);
+
+            return field;
+        }
+
+        static string ReplaceCharWithStrings(string originalString, char charToReplace, List<string> replacements)
+        {
+            int replacementIndex = 0; // To keep track of which replacement string to use
+            string result = "";
+
+            foreach (char c in originalString)
+            {
+                if (c == charToReplace)
+                {
+                    // Add the replacement string from the list
+                    result += replacements[replacementIndex % replacements.Count];
+                    replacementIndex++; // Move to the next replacement string for the next match
+                }
+                else
+                {
+                    // If no match, add the original character
+                    result += c;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Executes a Discord webhook to post WvW results.
+        /// </summary>
+        /// <param name="webhook">The webhook data to use when generating the report</param>
+        /// <param name="reportJSON">The original report from dps.reports</param>
+        /// <param name="players">List of players that are involved in the fight</param>
+        /// <param name="discordContentEmbed">The header to include with the report</param>
+        /// <returns></returns>
+        private async Task ExecuteWebhookWvW(DiscordWebhookData webhook, DpsReportJson reportJSON, List<LogPlayer> players, DiscordApiJsonContentEmbed discordContentEmbed)
+        {
+            // Get a copy of the max player count for the lists so we can restore it later if we change it temporarily.
+            var maxPlayers = webhook.MaxPlayers;
+
+            // Check if any emojis are available.
+            if (webhook?.ClassEmojis?.Any() is not true)
+            {
+                // If none are available, reset to the default.
+                webhook?.ResetEmojis();
+            }
+
+            while (true)
+            {
+                // BEAR
+                var rankFields = new List<DiscordApiJsonContentEmbedField>();
+
+                // fields
+                var discordContentEmbedSquadAndPlayers = new List<DiscordApiJsonContentEmbedField>();
+                var discordContentEmbedSquad = new List<DiscordApiJsonContentEmbedField>();
+                var discordContentEmbedPlayers = new List<DiscordApiJsonContentEmbedField>();
+                var discordContentEmbedNone = new List<DiscordApiJsonContentEmbedField>();
+
+                if (reportJSON.ExtraJson is not null)
+                {
+                    var squadField = CreateTeamField(webhook, "Squad Summary", reportJSON.ExtraJson.Players.Where(x => !x.FriendlyNpc && !x.NotInSquad));
+
+                    // enemy summary field
+                    var enemyFields = new List<DiscordApiJsonContentEmbedField>();
+                    var enemyGroups = reportJSON.ExtraJson.Targets
+                        .GroupBy(x => x.TeamId)
+                        .Where(g => g.Count() > 1);
+
+                    foreach (var group in enemyGroups)
+                    {
+                        var team = group.Key switch
+                        {
+                            RED_TEAM => "Red Team",
+                            BLUE_TEAM => "Blue Team",
+                            GREEN_TEAM => "Green Team",
+                            _ => $"Team ID ({group.Key})"
+                        };
+
+                        var enemyField = CreateTeamField(webhook, team, group.Where(x => !x.IsFake));
+                        if (enemyField is not null) enemyFields.Add(enemyField);
+                    }
+
+                    // === Ranked field summaries ===
+
+                    if (webhook.IncludeDamageSummary)
+                    {
+                        // damage summary
+                        var damageStats = reportJSON.ExtraJson.Players
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.DpsTargets.Sum(y => y[0].Damage) > 0))
+                            .OrderByDescending(x => x.DpsTargets.Sum(y => y[0].Damage))
+                            .Take(webhook.MaxPlayers)
+                            .ToArray();
+
+                        var damageField = CreateRankField(webhook, "Damage Summary", damageStats, p => p.DpsTargets.Sum(y => y[0].Damage));
+                        if (damageField is not null) rankFields.Add(damageField);
+                    }
+
+                    if (webhook.IncludeDownsContributionSummary)
+                    {
+                        // downs contribution summary
+                        var downsContributionStats = reportJSON.ExtraJson.Players
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.StatsTargets.Sum(y => y[0].DownContribution) > 0))
+                            .OrderByDescending(x => x.StatsTargets.Sum(y => y[0].DownContribution))
+                            .Take(webhook.MaxPlayers)
+                            .ToArray();
+
+                        var downsContributionField = CreateRankField(webhook, "Downs Contribution", downsContributionStats, p => p.StatsTargets.Sum(y => y[0].DownContribution));
+                        if (downsContributionField is not null) rankFields.Add(downsContributionField);
+                    }
+
+                    if (webhook.IncludeHealingSummary)
+                    {
+                        // healing summary
+                        var healingStats = reportJSON.ExtraJson.Players
+                            //.Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtHealingStats?.OutgoingHealingAllies?.Any() == true))
+                            //.OrderByDescending(x => x.ExtHealingStats.OutgoingHealingAllies.Sum(p => p.FirstOrDefault()?.Healing ?? 0))
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && ((x.StatsHealing?.TotalHealingOnSquad ?? 0) > 0))
+                            .OrderByDescending(x => x.StatsHealing?.TotalHealingOnSquad ?? 0)
+                            .Take(webhook.MaxPlayers)
+                            .ToArray();
+
+                        var healingField = CreateRankField(webhook, "Healing Summary", healingStats, p => (int)(p.StatsHealing?.TotalHealingOnSquad ?? 0));
+                        if (healingField is not null) rankFields.Add(healingField);
+                    }
+
+                    if (webhook.IncludeBarrierSummary)
+                    {
+                        // barrier summary
+                        var barrierStats = reportJSON.ExtraJson.Players
+                            //.Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtBarrierStats?.OutgoingBarrierAllies?.Any() == true))
+                            //.OrderByDescending(x => x.ExtBarrierStats.OutgoingBarrierAllies.Sum(x => x.FirstOrDefault()?.Barrier ?? 0))
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && ((x.StatsBarrier?.TotalBarrierOnSquad ?? 0) > 0))
+                            .OrderByDescending(x => x.StatsBarrier?.TotalBarrierOnSquad ?? 0)
+                            .Take(webhook.MaxPlayers)
+                            .ToArray();
+
+                        var barrierRatio = 1.0f;
+
+                        if (webhook.AdjustBarrier)
+                        {
+                            var totalBarrier = reportJSON.ExtraJson.Players.Sum(p => p.StatsBarrier?.TotalBarrierOnSquad ?? 0);
+                            var absorbedBarrier = reportJSON.ExtraJson.Players.Sum(p => p.Defenses.FirstOrDefault()?.DamageBarrier ?? 0);
+                            barrierRatio = (float)absorbedBarrier / (float)totalBarrier;
+                        }
+
+                        var barrierField = CreateRankField(webhook, $"Barrier Summary{(webhook.AdjustBarrier ? " (Adjusted)" : string.Empty)}", barrierStats, p => (int)((p.StatsBarrier?.TotalBarrierOnSquad ?? 0) * barrierRatio));
+                        if (barrierField is not null) rankFields.Add(barrierField);
+                    }
+
+                    if (webhook.IncludeCleansingSummary)
+                    {
+                        // cleanses summary
+                        var cleansesStats = reportJSON.ExtraJson.Players
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.Support[0].CondiCleanseTotal > 0))
+                            .OrderByDescending(x => x.Support[0].CondiCleanseTotal)
+                            .Take(webhook.MaxPlayers)
+                            .ToArray();
+
+                        var cleansesField = CreateRankField(webhook, "Cleanses Summary", cleansesStats, p => p.Support[0].CondiCleanseTotal);
+                        if (cleansesField is not null) rankFields.Add(cleansesField);
+                    }
+
+                    if (webhook.IncludeStripSummary)
+                    {
+                        // boon strips summary
+                        var boonStripsStats = reportJSON.ExtraJson.Players
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.Support[0].BoonStrips > 0))
+                            .OrderByDescending(x => x.Support[0].BoonStrips)
+                            .Take(webhook.MaxPlayers)
+                            .ToArray();
+
+                        var boonStripsField = CreateRankField(webhook, "Boon Strip Summary", boonStripsStats, p => p.Support[0].BoonStrips);
+                        if (boonStripsField is not null) rankFields.Add(boonStripsField);
+                    }
+
+                    if (webhook.IncludeCCSummary)
+                    {
+                        // CC summary
+                        var ccStats = reportJSON.ExtraJson.Players
+                            .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.TotalDamageDist?.Any() == true))
+                            .OrderByDescending
+                            (
+                                player => player.TotalDamageDist.Sum
+                                (
+                                    attack => attack
+                                    // Filter to only skills that match profession and skill ID.
+                                    .Where(
+                                        skill =>
+                                        mapping.Any(
+                                            m =>
+                                            m.category.Any(
+                                                c =>
+                                                c == player.Profession || c == "Relics"
+                                            ) && m.skills.Any(
+                                                s =>
+                                                s.id == skill.Id
+                                            )
+                                        )
+                                    )
+                                    // Sum the skills multiplying by matching skill ID coefficient.
+                                    .Sum(
+                                        skill =>
+                                        skill.ConnectedHits * mapping.FirstOrDefault(
+                                            m =>
+                                            m.category.Any(
+                                                c =>
+                                                c == player.Profession || c == "Relics"
+                                            ) && m.skills.Any(
+                                                s =>
+                                                s.id == skill.Id
+                                            )
+                                        ).skills.FirstOrDefault(
+                                            s =>
+                                            s.id == skill.Id
+                                        ).coefficient
+                                    )
+                                )
+                            )
+                            .Take(webhook.MaxPlayers)
+                            .ToArray();
+
+                        var ccField = CreateRankField(webhook, "CC Summary", ccStats, p =>
+                            (int)Math.Round(p.TotalDamageDist.Sum
+                            (
+                                attack => attack
+                                // Filter to only skills that match profession and skill ID.
+                                .Where(
+                                    skill =>
+                                    mapping.Any(
+                                        m =>
+                                        m.category.Any(
+                                            c =>
+                                            c == p.Profession || c == "Relics"
+                                        ) &&
+                                        m.skills.Any(
+                                            s =>
+                                            s.id == skill.Id
+                                        )
+                                    )
+                                )
+                                // Sum the skills multiplying by matching skill ID coefficient.
+                                .Sum(
+                                    skill =>
+                                    skill.ConnectedHits * mapping.FirstOrDefault(
+                                        m =>
+                                        m.category.Any(
+                                            c =>
+                                            c == p.Profession || c == "Relics"
+                                        ) && m.skills.Any(
+                                            s =>
+                                            s.id == skill.Id
+                                        )
+                                    ).skills.FirstOrDefault(
+                                        s =>
+                                        s.id == skill.Id
+                                    ).coefficient
+                                )
+                            ))
+                        );
+
+                        if (ccField is not null) rankFields.Add(ccField);
+                    }
+
+                    // add the fields
+                    discordContentEmbed.Fields = new List<DiscordApiJsonContentEmbedField>();
+
+                    // BEAR
+                    // add the fields
+                    discordContentEmbedSquadAndPlayers.Add(squadField);
+                    discordContentEmbedSquad.Add(squadField);
+                    discordContentEmbedSquadAndPlayers.AddRange(enemyFields);
+                    discordContentEmbedSquad.AddRange(enemyFields);
+
+                    discordContentEmbedSquadAndPlayers.Add(FIELD_SPACER);
+                    discordContentEmbedPlayers.Add(FIELD_SPACER);
+
+                    // Iterate all the rank fields to be displayed, and add a non-inline spacer
+                    // between them so they are not all squished on a single line.
+                    var fieldSpacing = 2;
+                    var adjustedFields = new List<DiscordApiJsonContentEmbedField>();
+                    for (int i = 0; i < rankFields.Count; i++)
+                    {
+                        if (i > 0 && i % fieldSpacing == 0)
+                            adjustedFields.Add(FIELD_SPACER);
+
+                        adjustedFields.Add(rankFields[i]);
+                    }
+
+                    rankFields = adjustedFields;
+
+                    if (webhook.ShowFightAwards)
+                    {
+                        // Add awards
+                        var awardFields = AssignAwards(reportJSON.ExtraJson.Players, reportJSON.ExtraJson.Targets, webhook.GoogleSheetsUrl, reportJSON.ExtraJson.SkillList, reportJSON.ExtraJson.BuffList);
+                        if (awardFields?.Any() is true) rankFields.AddRange(awardFields);
+                    }
+
+                    // Add a spacer to the last rank field, so the footer is not so close.
+                    rankFields.Add(FIELD_SPACER);
+
+                    discordContentEmbedSquadAndPlayers.AddRange(rankFields);
+                    discordContentEmbedPlayers.AddRange(rankFields);
+                }
+
+                // post to discord
+                var discordContentWvW = new DiscordApiJsonContent()
+                {
+                    Embeds = [discordContentEmbed]
+                };
+                discordContentWvW.Embeds[0].Fields = discordContentEmbedSquadAndPlayers;
+                var jsonContentWvWSquadAndPlayers = JsonConvert.SerializeObject(discordContentWvW);
+                discordContentWvW.Embeds[0].Fields = discordContentEmbedSquad;
+                var jsonContentWvWSquad = JsonConvert.SerializeObject(discordContentWvW);
+                discordContentWvW.Embeds[0].Fields = discordContentEmbedPlayers;
+                var jsonContentWvWPlayers = JsonConvert.SerializeObject(discordContentWvW);
+                discordContentWvW.Embeds[0].Fields = discordContentEmbedNone;
+                var jsonContentWvWNone = JsonConvert.SerializeObject(discordContentWvW);
+
+                var bossData = Bosses.GetBossDataFromId(1);
+
+                try
+                {
+                    await SendLogViaWebhook
+                    (
+                        webhook,
+                        reportJSON.Encounter.Success ?? false,
+                        reportJSON.Encounter.BossId,
+                        false,
+                        false,
+                        bossData, players,
+                        jsonContentWvWNone, jsonContentWvWSquad, jsonContentWvWPlayers, jsonContentWvWSquadAndPlayers
+                    );
+                }
+                catch (DiscordSizeException ex)
+                {
+                    // Discord returned an error when trying to post the report, adjust and retry.
+                    mainLink.AddToText($">:> Discord returned an error while processing the webhook \"{webhook.Name}\": {ex.Message}");
+                    // Check if the list will contain at least one player after the reduction
+                    if (webhook.MaxPlayers > 1)
+                    {
+                        // Reduce the player count for the list
+                        webhook.MaxPlayers--;
+                        mainLink.AddToText($">:> Reducing the number of players in lists to {webhook.MaxPlayers}, and retrying...");                        
+                        // Retry
+                        continue;
+                    }
+                }
+
+                // Success, break out of the loop
+                break;
+            }
+
+            // Restore the player count in case it was temporariy reduced when retrying a Discord post.
+            webhook.MaxPlayers = maxPlayers;
+        }
+
         internal async Task ExecuteAllActiveWebhooksAsync(DpsReportJson reportJSON, List<LogPlayer> players)
         {
             if (reportJSON.Encounter.BossId.Equals(1)) // WvW
             {
                 var extraJSONFightName = (reportJSON.ExtraJson is null) ? reportJSON.Encounter.Boss : reportJSON.ExtraJson.FightName;
-                var extraJSON = (reportJSON.ExtraJson is null) ? "" : $"Recorded by: {reportJSON.ExtraJson.RecordedByAccountName}\nDuration: {reportJSON.ExtraJson.Duration}\nElite Insights version: {reportJSON.ExtraJson.EliteInsightsVersion}";
-                var icon = "";
-                var bossData = Bosses.GetBossDataFromId(1);
-                if (bossData is not null)
-                {
-                    icon = bossData.Icon;
-                }
+                var extraJSON = (reportJSON.ExtraJson is null) ? "" : $"Recorded by: {reportJSON.ExtraJson.RecordedByAccountName}\nDuration: {reportJSON.ExtraJson.Duration}\nElite Insights version: {reportJSON.ExtraJson.EliteInsightsVersion}";                
                 const int colour = 16752238;
-                var discordContentEmbedThumbnail = new DiscordApiJsonContentEmbedThumbnail()
-                {
-                    Url = icon,
-                };
                 var timestampDateTime = DateTime.UtcNow;
                 if (reportJSON.ExtraJson is not null)
                 {
@@ -527,470 +1023,13 @@ namespace PlenBotLogUploader
                     Colour = colour,
                     TimeStamp = timestamp,
                     // Don't  include the thumbnail, it compresses the usable space too much.
-                    //Thumbnail = discordContentEmbedThumbnail,
                 };
 
                 foreach (var key in allWebhooks.Keys)
                 {
                     var webhook = allWebhooks[key];
 
-                    // Check if any emojis are available.
-                    if (webhook?.ClassEmojis?.Any() is not true)
-                    {
-                        // If none are available, reset to the default.
-                        webhook?.ResetEmojis();
-                    }
-
-                    // Private method to create the Discord fields for each team (both friendly squad and enemies)
-                    DiscordApiJsonContentEmbedField CreateTeamField<T>(string name, IEnumerable<T> team)
-                    {
-                        var teamCount = team.Count();
-                        var teamDamage = team switch
-                        {
-                            IEnumerable<Player> players => players.Select(x => x.DpsTargets.Sum(y => y.Sum(z => z.Damage))).Sum(),
-                            IEnumerable<Target> enemies => enemies.Select(x => x.DpsAll[0].Damage).Sum(),
-                            _ => 0
-                        };
-                        var teamDps = team switch
-                        {
-                            IEnumerable<Player> players => players.Select(x => x.DpsTargets.Sum(y => y.Sum(z => z.Dps))).Sum(),
-                            IEnumerable<Target> enemies => enemies.Select(x => x.DpsAll[0].Dps).Sum(),
-                            _ => 0
-                        };
-                        var teamDowns = team switch
-                        {
-                            IEnumerable<Player> players => players.Select(x => x.Defenses[0].DownCount).Sum(),
-                            IEnumerable<Target> enemies => enemies.Select(x => x.Defenses[0].DownCount).Sum(),
-                            _ => 0
-                        };
-                        var teamDeaths = team switch
-                        {
-                            IEnumerable<Player> players => players.Select(x => x.Defenses[0].DeadCount).Sum(),
-                            IEnumerable<Target> enemies => enemies.Select(x => x.Defenses[0].DeadCount).Sum(),
-                            _ => 0
-                        };
-
-                        var teamSummary = new TextTable(2, TableBordersStyle.BLANKS, TableVisibleBorders.NONE);
-                        teamSummary.SetColumnWidthRange(0, 8, 8);
-                        teamSummary.SetColumnWidthRange(1, 15, 15);
-
-                        teamSummary.AddCell("Count:", tableCellLeftAlign);
-                        teamSummary.AddCell($"{teamCount}", tableCellLeftAlign);
-
-                        teamSummary.AddCell("DMG:", tableCellLeftAlign);
-                        teamSummary.AddCell($"{teamDamage.ParseAsK()}", tableCellLeftAlign);
-
-                        teamSummary.AddCell("DPS:", tableCellLeftAlign);
-                        teamSummary.AddCell($"{teamDps.ParseAsK()}", tableCellLeftAlign);
-
-                        teamSummary.AddCell("Downs:", tableCellLeftAlign);
-                        teamSummary.AddCell($"{teamDowns}", tableCellLeftAlign);
-
-                        teamSummary.AddCell("Deaths:", tableCellLeftAlign);
-                        teamSummary.AddCell($"{teamDeaths}", tableCellLeftAlign);
-
-                        var classes = string.Empty;
-
-                        if (webhook.ShowClassIcons && webhook.ClassEmojis?.Any() is true)
-                        {
-                            var teamClasses = team switch
-                            {
-                                IEnumerable<Player> players => players
-                                    .GroupBy(x => x.Profession.ToUpper())
-                                    .OrderByDescending(x => x.Count())
-                                    .Select(x => $"`{(x.Count() < 10 ? " " : "") + x.Count().ToString()}`{{{x.Key}}}")
-                                    .ToList(),
-                                IEnumerable<Target> enemies => enemies
-                                    .GroupBy(x => x.Name.Split(' ').FirstOrDefault().ToUpper())
-                                    .OrderByDescending(x => x.Count())
-                                    .Select(x => $"`{(x.Count() < 10 ? " " : "") + x.Count().ToString()}`{{{x.Key}}}")
-                                    .ToList(),
-                                _ => new List<string>()
-                            };
-
-                            var emojiPerLine = 4;
-                            var stringBuilder = new StringBuilder();
-                            for (int i = 0; i < teamClasses.Count(); i++)
-                            {
-                                if (i > 0 && i % emojiPerLine == 0)
-                                    stringBuilder.Append("\n"); // Add a newline
-
-                                stringBuilder.Append(teamClasses.ElementAt(i));
-                            }
-
-                            classes = stringBuilder.ToString();
-                        }
-
-                        return new DiscordApiJsonContentEmbedField()
-                        {
-                            Name = $"\n{name}:",
-                            Value = $"```{TEAM_FORMAT_PREFIX}\n{teamSummary.Render()}``` \n{classes}",
-                            Inline = true
-                        };
-                    }
-
-                    // Private method to create the formatted rank fields for each category.
-                    DiscordApiJsonContentEmbedField CreateRankField(string name, IEnumerable<Player> players, Func<Player, int> getValue)
-                    {
-                        var professionReplacement = '@';
-                        var field = new DiscordApiJsonContentEmbedField();
-                        var textTable = new TextTable(4, TableBordersStyle.BLANKS, TableVisibleBorders.NONE);
-                        var useEmoji = webhook.ShowClassIcons && (webhook.ClassEmojis?.Any() is true);
-
-                        if (useEmoji)
-                        {
-                            textTable.SetColumnWidthRange(0, 1, 1);
-                            textTable.SetColumnWidthRange(1, 4, 4);
-                            textTable.SetColumnWidthRange(2, 18, 18);
-                            textTable.SetColumnWidthRange(3, 10, 10);
-                        }
-                        else
-                        {
-                            textTable.SetColumnWidthRange(0, 7, 7);
-                            textTable.SetColumnWidthRange(1, 4, 4);
-                            textTable.SetColumnWidthRange(2, 14, 14);
-                            textTable.SetColumnWidthRange(3, 10, 10);
-                        }
-
-                        var rank = 0;
-                        foreach (var player in players.Where(p => getValue(p) > 0))
-                        {
-                            var value = getValue(player);
-                            var profession = $"({player.ProfessionShort})";
-
-                            rank++;
-
-                            if (useEmoji)
-                            {
-                                var index = webhook.ClassEmojis.FindIndex(x => x.className.Equals(player.Profession, StringComparison.InvariantCultureIgnoreCase));
-                                textTable.AddCell(professionReplacement.ToString(), tableCellLeftAlign);
-                                textTable.AddCell($"`{(rank < 10 ? " " : "") + rank}", tableCellCenterAlign);
-                            }
-                            else
-                            {
-                                textTable.AddCell($"`{profession}", tableCellLeftAlign);
-                                textTable.AddCell($"{(rank < 10 ? " " : "") + rank}", tableCellCenterAlign);
-                            }
-
-                            textTable.AddCell($"{player.Name}");
-                            textTable.AddCell($"{value.ParseAsK()}`", tableCellRightAlign);
-                        }
-
-                        // If rank was not incremented, nothing was added to the table.
-                        if (rank == 0) return null;
-
-                        field.Name = $"{name}:";
-                        field.Value = $"{textTable.Render()}";
-                        field.Inline = true;
-
-                        var emojis = players.Select(p => webhook?.ClassEmojis?.Find(x => x.className.Equals(p.Profession, StringComparison.InvariantCultureIgnoreCase)).emojiCode ?? NO_EMOJI).ToList();
-
-                        field.Value = ReplaceCharWithStrings(field.Value, professionReplacement, emojis);
-
-                        return field;
-                    }
-
-                    static string ReplaceCharWithStrings(string originalString, char charToReplace, List<string> replacements)
-                    {
-                        int replacementIndex = 0; // To keep track of which replacement string to use
-                        string result = "";
-
-                        foreach (char c in originalString)
-                        {
-                            if (c == charToReplace)
-                            {
-                                // Add the replacement string from the list
-                                result += replacements[replacementIndex % replacements.Count];
-                                replacementIndex++; // Move to the next replacement string for the next match
-                            }
-                            else
-                            {
-                                // If no match, add the original character
-                                result += c;
-                            }
-                        }
-
-                        return result;
-                    }
-
-                    // BEAR
-                    var rankFields = new List<DiscordApiJsonContentEmbedField>();
-
-                    // fields
-                    var discordContentEmbedSquadAndPlayers = new List<DiscordApiJsonContentEmbedField>();
-                    var discordContentEmbedSquad = new List<DiscordApiJsonContentEmbedField>();
-                    var discordContentEmbedPlayers = new List<DiscordApiJsonContentEmbedField>();
-                    var discordContentEmbedNone = new List<DiscordApiJsonContentEmbedField>();
-
-                    if (reportJSON.ExtraJson is not null)
-                    {
-                        var squadField = CreateTeamField("Squad Summary", reportJSON.ExtraJson.Players.Where(x => !x.FriendlyNpc && !x.NotInSquad));
-
-                        // enemy summary field
-                        var enemyFields = new List<DiscordApiJsonContentEmbedField>();
-                        var enemyGroups = reportJSON.ExtraJson.Targets
-                            .GroupBy(x => x.TeamId)
-                            .Where(g => g.Count() > 1);
-
-                        foreach (var group in enemyGroups)
-                        {
-                            var team = group.Key switch
-                            {
-                                RED_TEAM => "Red Team",
-                                BLUE_TEAM => "Blue Team",
-                                GREEN_TEAM => "Green Team",
-                                _ => $"Team ID ({group.Key})"
-                            };
-
-                            var enemyField = CreateTeamField(team, group.Where(x => !x.IsFake));
-                            if (enemyField is not null) enemyFields.Add(enemyField);
-                        }
-
-                        // === Ranked field summaries ===
-
-                        if (webhook.IncludeDamageSummary)
-                        {
-                            // damage summary
-                            var damageStats = reportJSON.ExtraJson.Players
-                                .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.DpsTargets.Sum(y => y[0].Damage) > 0))
-                                .OrderByDescending(x => x.DpsTargets.Sum(y => y[0].Damage))
-                                .Take(webhook.MaxPlayers)
-                                .ToArray();
-
-                            var damageField = CreateRankField("Damage Summary", damageStats, p => p.DpsTargets.Sum(y => y[0].Damage));
-                            if (damageField is not null) rankFields.Add(damageField);
-                        }
-
-                        if (webhook.IncludeDownsContributionSummary)
-                        {
-                            // downs contribution summary
-                            var downsContributionStats = reportJSON.ExtraJson.Players
-                                .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.StatsTargets.Sum(y => y[0].DownContribution) > 0))
-                                .OrderByDescending(x => x.StatsTargets.Sum(y => y[0].DownContribution))
-                                .Take(webhook.MaxPlayers)
-                                .ToArray();
-
-                            var downsContributionField = CreateRankField("Downs Contribution", downsContributionStats, p => p.StatsTargets.Sum(y => y[0].DownContribution));
-                            if (downsContributionField is not null) rankFields.Add(downsContributionField);
-                        }
-
-                        if (webhook.IncludeHealingSummary)
-                        {
-                            // healing summary
-                            var healingStats = reportJSON.ExtraJson.Players
-                                //.Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtHealingStats?.OutgoingHealingAllies?.Any() == true))
-                                //.OrderByDescending(x => x.ExtHealingStats.OutgoingHealingAllies.Sum(p => p.FirstOrDefault()?.Healing ?? 0))
-                                .Where(x => !x.FriendlyNpc && !x.NotInSquad && ((x.StatsHealing?.TotalHealingOnSquad ?? 0) > 0))
-                                .OrderByDescending(x => x.StatsHealing?.TotalHealingOnSquad ?? 0)
-                                .Take(webhook.MaxPlayers)
-                                .ToArray();
-
-                            var healingField = CreateRankField("Healing Summary", healingStats, p => (int)(p.StatsHealing?.TotalHealingOnSquad ?? 0));
-                            if (healingField is not null) rankFields.Add(healingField);
-                        }
-
-                        if (webhook.IncludeBarrierSummary)
-                        {
-                            // barrier summary
-                            var barrierStats = reportJSON.ExtraJson.Players
-                                //.Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.ExtBarrierStats?.OutgoingBarrierAllies?.Any() == true))
-                                //.OrderByDescending(x => x.ExtBarrierStats.OutgoingBarrierAllies.Sum(x => x.FirstOrDefault()?.Barrier ?? 0))
-                                .Where(x => !x.FriendlyNpc && !x.NotInSquad && ((x.StatsBarrier?.TotalBarrierOnSquad ?? 0) > 0))
-                                .OrderByDescending(x => x.StatsBarrier?.TotalBarrierOnSquad ?? 0)
-                                .Take(webhook.MaxPlayers)
-                                .ToArray();
-
-                            var barrierRatio = 1.0f;
-
-                            if (webhook.AdjustBarrier)
-                            {
-                                var totalBarrier = reportJSON.ExtraJson.Players.Sum(p => p.StatsBarrier?.TotalBarrierOnSquad ?? 0);
-                                var absorbedBarrier = reportJSON.ExtraJson.Players.Sum(p => p.Defenses.FirstOrDefault()?.DamageBarrier ?? 0);
-                                barrierRatio = (float)absorbedBarrier / (float)totalBarrier;
-                            }
-
-                            var barrierField = CreateRankField($"Barrier Summary{(webhook.AdjustBarrier ? " (Adjusted)" : string.Empty)}", barrierStats, p => (int)((p.StatsBarrier?.TotalBarrierOnSquad ?? 0) * barrierRatio));
-                            if (barrierField is not null) rankFields.Add(barrierField);
-                        }
-
-                        if (webhook.IncludeCleansingSummary)
-                        {
-                            // cleanses summary
-                            var cleansesStats = reportJSON.ExtraJson.Players
-                                .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.Support[0].CondiCleanseTotal > 0))
-                                .OrderByDescending(x => x.Support[0].CondiCleanseTotal)
-                                .Take(webhook.MaxPlayers)
-                                .ToArray();
-
-                            var cleansesField = CreateRankField("Cleanses Summary", cleansesStats, p => p.Support[0].CondiCleanseTotal);
-                            if (cleansesField is not null) rankFields.Add(cleansesField);
-                        }
-
-                        if (webhook.IncludeStripSummary)
-                        {
-                            // boon strips summary
-                            var boonStripsStats = reportJSON.ExtraJson.Players
-                                .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.Support[0].BoonStrips > 0))
-                                .OrderByDescending(x => x.Support[0].BoonStrips)
-                                .Take(webhook.MaxPlayers)
-                                .ToArray();
-
-                            var boonStripsField = CreateRankField("Boon Strip Summary", boonStripsStats, p => p.Support[0].BoonStrips);
-                            if (boonStripsField is not null) rankFields.Add(boonStripsField);
-                        }
-
-                        if (webhook.IncludeCCSummary)
-                        {
-                            // CC summary
-                            var ccStats = reportJSON.ExtraJson.Players
-                                .Where(x => !x.FriendlyNpc && !x.NotInSquad && (x.TotalDamageDist?.Any() == true))
-                                .OrderByDescending
-                                (
-                                    player => player.TotalDamageDist.Sum
-                                    (
-                                        attack => attack
-                                        // Filter to only skills that match profession and skill ID.
-                                        .Where(
-                                            skill =>
-                                            mapping.Any(
-                                                m =>
-                                                m.category.Any(
-                                                    c =>
-                                                    c == player.Profession || c == "Relics"
-                                                ) && m.skills.Any(
-                                                    s =>
-                                                    s.id == skill.Id
-                                                )
-                                            )
-                                        )
-                                        // Sum the skills multiplying by matching skill ID coefficient.
-                                        .Sum(
-                                            skill =>
-                                            skill.ConnectedHits * mapping.FirstOrDefault(
-                                                m =>
-                                                m.category.Any(
-                                                    c =>
-                                                    c == player.Profession || c == "Relics"
-                                                ) && m.skills.Any(
-                                                    s =>
-                                                    s.id == skill.Id
-                                                )
-                                            ).skills.FirstOrDefault(
-                                                s =>
-                                                s.id == skill.Id
-                                            ).coefficient
-                                        )
-                                    )
-                                )
-                                .Take(webhook.MaxPlayers)
-                                .ToArray();
-
-                            var ccField = CreateRankField("CC Summary", ccStats, p =>
-                                (int)Math.Round(p.TotalDamageDist.Sum
-                                (
-                                    attack => attack
-                                    // Filter to only skills that match profession and skill ID.
-                                    .Where(
-                                        skill =>
-                                        mapping.Any(
-                                            m =>
-                                            m.category.Any(
-                                                c =>
-                                                c == p.Profession || c == "Relics"
-                                            ) &&
-                                            m.skills.Any(
-                                                s =>
-                                                s.id == skill.Id
-                                            )
-                                        )
-                                    )
-                                    // Sum the skills multiplying by matching skill ID coefficient.
-                                    .Sum(
-                                        skill =>
-                                        skill.ConnectedHits * mapping.FirstOrDefault(
-                                            m =>
-                                            m.category.Any(
-                                                c =>
-                                                c == p.Profession || c == "Relics"
-                                            ) && m.skills.Any(
-                                                s =>
-                                                s.id == skill.Id
-                                            )
-                                        ).skills.FirstOrDefault(
-                                            s =>
-                                            s.id == skill.Id
-                                        ).coefficient
-                                    )
-                                ))
-                            );
-
-                            if (ccField is not null) rankFields.Add(ccField);
-                        }
-
-                        // add the fields
-                        discordContentEmbed.Fields = new List<DiscordApiJsonContentEmbedField>();
-
-                        // BEAR
-                        // add the fields
-                        discordContentEmbedSquadAndPlayers.Add(squadField);
-                        discordContentEmbedSquad.Add(squadField);
-                        discordContentEmbedSquadAndPlayers.AddRange(enemyFields);
-                        discordContentEmbedSquad.AddRange(enemyFields);
-
-                        discordContentEmbedSquadAndPlayers.Add(FIELD_SPACER);
-                        discordContentEmbedPlayers.Add(FIELD_SPACER);
-
-                        // Iterate all the rank fields to be displayed, and add a non-inline spacer
-                        // between them so they are not all squished on a single line.
-                        var fieldSpacing = 2;
-                        var adjustedFields = new List<DiscordApiJsonContentEmbedField>();
-                        for (int i = 0; i < rankFields.Count; i++)
-                        {
-                            if (i > 0 && i % fieldSpacing == 0)
-                                adjustedFields.Add(FIELD_SPACER);
-
-                            adjustedFields.Add(rankFields[i]);
-                        }
-
-                        rankFields = adjustedFields;
-
-                        if (webhook.ShowFightAwards)
-                        {
-                            // Add awards
-                            var awardFields = AssignAwards(reportJSON.ExtraJson.Players, reportJSON.ExtraJson.Targets, webhook.GoogleSheetsUrl, reportJSON.ExtraJson.SkillList, reportJSON.ExtraJson.BuffList);
-                            if (awardFields?.Any() is true) rankFields.AddRange(awardFields);
-                        }
-
-                        // Add a spacer to the last rank field, so the footer is not so close.
-                        rankFields.Add(FIELD_SPACER);
-
-                        discordContentEmbedSquadAndPlayers.AddRange(rankFields);
-                        discordContentEmbedPlayers.AddRange(rankFields);
-                    }
-
-                    // post to discord
-                    var discordContentWvW = new DiscordApiJsonContent()
-                    {
-                        Embeds = [discordContentEmbed]
-                    };
-                    discordContentWvW.Embeds[0].Fields = discordContentEmbedSquadAndPlayers;
-                    var jsonContentWvWSquadAndPlayers = JsonConvert.SerializeObject(discordContentWvW);
-                    discordContentWvW.Embeds[0].Fields = discordContentEmbedSquad;
-                    var jsonContentWvWSquad = JsonConvert.SerializeObject(discordContentWvW);
-                    discordContentWvW.Embeds[0].Fields = discordContentEmbedPlayers;
-                    var jsonContentWvWPlayers = JsonConvert.SerializeObject(discordContentWvW);
-                    discordContentWvW.Embeds[0].Fields = discordContentEmbedNone;
-                    var jsonContentWvWNone = JsonConvert.SerializeObject(discordContentWvW);
-
-                    await SendLogViaWebhooks
-                    (
-                        reportJSON.Encounter.Success ?? false,
-                        reportJSON.Encounter.BossId,
-                        false,
-                        false,
-                        bossData, players,
-                        jsonContentWvWNone, jsonContentWvWSquad, jsonContentWvWPlayers, jsonContentWvWSquadAndPlayers
-                    );
+                    await ExecuteWebhookWvW(webhook, reportJSON, players, discordContentEmbed);
                 }
 
                 if (allWebhooks.Count > 0)
@@ -1160,52 +1199,76 @@ namespace PlenBotLogUploader
             }
         }
 
+        internal async Task SendLogViaWebhook(DiscordWebhookData webhook, bool success, int bossId, bool isCm, bool isLegendaryCm, BossData bossData, List<LogPlayer> players, string jsonContentNone, string jsonContentSquad, string jsonContentPlayers, string jsonContentSquadAndPlayers)
+        {
+            if (!webhook.Active
+                || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnSuccessOnly) && !success)
+                || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnFailOnly) && success)
+                || (!webhook.IncludeNormalLogs && !isCm)
+                || (!webhook.IncludeChallengeModeLogs && isCm && !isLegendaryCm)
+                || (!webhook.IncludeLegendaryChallengeModeLogs && isLegendaryCm)
+                || webhook.BossesDisable.Contains(bossId)
+                || (!webhook.AllowUnknownBossIds && (bossData is null))
+                || (!webhook.Team.IsSatisfied(players)))
+            {
+                return;
+            }
+            try
+            {
+                var jsonToSend = webhook.SummaryType switch
+                {
+                    DiscordWebhookDataLogSummaryType.None => jsonContentNone,
+                    DiscordWebhookDataLogSummaryType.SquadOnly => jsonContentSquad,
+                    DiscordWebhookDataLogSummaryType.PlayersOnly => jsonContentPlayers,
+                    _ => jsonContentSquadAndPlayers,
+                };
+
+                foreach (var (className, emojiCode) in webhook.ClassEmojis)
+                {
+                    jsonToSend = jsonToSend.Replace($"{{{className}}}", emojiCode);
+                }
+
+                // In case there was a class we don't have define in the emoji map, replace it with generic symbol.
+                var pattern = @"\{[A-Z]+\}";
+                jsonToSend = Regex.Replace(jsonToSend, pattern, NO_EMOJI);
+
+                using var content = new StringContent(jsonToSend, Encoding.UTF8, "application/json");
+                using var response = await mainLink.HttpClientController.PostAsync(webhook.Url, content);
+
+                var responseString = await response.Content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode && responseString.Contains("exceeds maximum size", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new DiscordSizeException($"Discord error: Embed exceeds maximum size");
+                }
+            }
+            catch (DiscordSizeException ex)
+            {
+                // Just forward to caller.
+                throw;
+            }
+            catch (UriFormatException ex)
+            {
+                mainLink.AddToText($">:> An error has occured while processing URL for the webhook \"{webhook.Name}\": {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                mainLink.AddToText($">:> An error has occured while processing the webhook \"{webhook.Name}\": {ex.Message}");
+            }
+        }
+
         internal async Task SendLogViaWebhooks(bool success, int bossId, bool isCm, bool isLegendaryCm, BossData bossData, List<LogPlayer> players, string jsonContentNone, string jsonContentSquad, string jsonContentPlayers, string jsonContentSquadAndPlayers)
         {
             foreach (var key in allWebhooks.Keys)
             {
                 var webhook = allWebhooks[key];
-                if (!webhook.Active
-                    || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnSuccessOnly) && !success)
-                    || (webhook.SuccessFailToggle.Equals(DiscordWebhookDataSuccessToggle.OnFailOnly) && success)
-                    || (!webhook.IncludeNormalLogs && !isCm)
-                    || (!webhook.IncludeChallengeModeLogs && isCm && !isLegendaryCm)
-                    || (!webhook.IncludeLegendaryChallengeModeLogs && isLegendaryCm)
-                    || webhook.BossesDisable.Contains(bossId)
-                    || (!webhook.AllowUnknownBossIds && (bossData is null))
-                    || (!webhook.Team.IsSatisfied(players)))
-                {
-                    continue;
-                }
+
                 try
                 {
-                    var jsonToSend = webhook.SummaryType switch
-                    {
-                        DiscordWebhookDataLogSummaryType.None => jsonContentNone,
-                        DiscordWebhookDataLogSummaryType.SquadOnly => jsonContentSquad,
-                        DiscordWebhookDataLogSummaryType.PlayersOnly => jsonContentPlayers,
-                        _ => jsonContentSquadAndPlayers,
-                    };
-
-                    foreach (var (className, emojiCode) in webhook.ClassEmojis)
-                    {
-                        jsonToSend = jsonToSend.Replace($"{{{className}}}", emojiCode);
-                    }
-
-                    // In case there was a class we don't have define in the emoji map, replace it with generic symbol.
-                    var pattern = @"\{[A-Z]+\}";
-                    jsonToSend = Regex.Replace(jsonToSend, pattern, NO_EMOJI);
-
-                    using var content = new StringContent(jsonToSend, Encoding.UTF8, "application/json");
-                    using var response = await mainLink.HttpClientController.PostAsync(webhook.Url, content);
+                    await SendLogViaWebhook(webhook, success, bossId, isCm, isLegendaryCm, bossData, players, jsonContentNone, jsonContentSquad, jsonContentPlayers, jsonContentSquadAndPlayers);
                 }
-                catch (UriFormatException ex)
+                catch(DiscordSizeException ex)
                 {
-                    mainLink.AddToText($">:> An error has occured while processing URL for the webhook \"{webhook.Name}\": {ex.Message}");
-                }
-                catch (Exception ex)
-                {
-                    mainLink.AddToText($">:> An error has occured while processing the webhook \"{webhook.Name}\": {ex.Message}");
+                    mainLink.AddToText($">:> Discord returned an error while processing the webhook \"{webhook.Name}\": {ex.Message}");
                 }
             }
         }
