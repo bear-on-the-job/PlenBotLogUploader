@@ -560,7 +560,7 @@ namespace PlenBotLogUploader
                 }
                 AddToText($">>> New release available (r{currentVersion})");
                 AddToText(">>> Read about all the changes here: https://github.com/bear-on-the-job/PlenBotLogUploader/releases/latest");
-                ShowBalloon("New release available for the uploader", $"If you want to update immediately, use the \"Update the uploader\" button.\nThe latest release is n. {currentVersion}.", 8500);
+                ShowBalloon("New release available for the uploader", $"If you want to update immediately, use the \"Update the uploader\" button.\nThe latest release is v{currentVersion}.", 8500);
             }
             catch
             {
