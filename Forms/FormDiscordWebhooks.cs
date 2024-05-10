@@ -19,7 +19,11 @@ using static System.Net.WebRequestMethods;
 
 namespace PlenBotLogUploader
 {
-    public class DiscordSizeException : Exception
+    public class DiscordException : Exception
+    {
+        public DiscordException(string message) : base(message) { }
+    }
+    public class DiscordSizeException : DiscordException
     {
         public DiscordSizeException(string message) : base(message) { }
     }
@@ -981,8 +985,8 @@ namespace PlenBotLogUploader
                 }
                 catch (DiscordSizeException ex)
                 {
-                    // Discord returned an error when trying to post the report, adjust and retry.
-                    mainLink.AddToText($">:> Discord returned an error while processing the webhook \"{webhook.Name}\": {ex.Message}");
+                    // Discord returned a size error when trying to post the report, adjust and retry.
+                    mainLink.AddToText($">:> Discord returned a size error while processing the webhook \"{webhook.Name}\": {ex.Message}");
                     // Check if the list will contain at least one player after the reduction
                     if (webhook.MaxPlayers > 1)
                     {
@@ -992,6 +996,11 @@ namespace PlenBotLogUploader
                         // Retry
                         continue;
                     }
+                }
+                catch (DiscordException ex)
+                {
+                    // Discord returned an error when trying to post the report, just show it.
+                    mainLink.AddToText($">:> Discord returned an error while processing the webhook \"{webhook.Name}\": {ex.Message}");
                 }
 
                 // Success, break out of the loop
@@ -1236,12 +1245,19 @@ namespace PlenBotLogUploader
                 using var response = await mainLink.HttpClientController.PostAsync(webhook.Url, content);
 
                 var responseString = await response.Content.ReadAsStringAsync();
-                if (!response.IsSuccessStatusCode && responseString.Contains("exceeds maximum size", StringComparison.InvariantCultureIgnoreCase))
+                if (!response.IsSuccessStatusCode)
                 {
-                    throw new DiscordSizeException($"Discord error: Embed exceeds maximum size");
+                    if (responseString.Contains("exceeds maximum size", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        throw new DiscordSizeException($"Discord error: Embed exceeds maximum size");
+                    }
+                    else
+                    {
+                        throw new DiscordException($"Discord error");
+                    }
                 }
             }
-            catch (DiscordSizeException ex)
+            catch (DiscordException ex)
             {
                 // Just forward to caller.
                 throw;
@@ -1266,7 +1282,7 @@ namespace PlenBotLogUploader
                 {
                     await SendLogViaWebhook(webhook, success, bossId, isCm, isLegendaryCm, bossData, players, jsonContentNone, jsonContentSquad, jsonContentPlayers, jsonContentSquadAndPlayers);
                 }
-                catch(DiscordSizeException ex)
+                catch(DiscordException ex)
                 {
                     mainLink.AddToText($">:> Discord returned an error while processing the webhook \"{webhook.Name}\": {ex.Message}");
                 }
