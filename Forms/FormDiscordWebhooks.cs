@@ -91,7 +91,7 @@ namespace PlenBotLogUploader
         {
             if (string.IsNullOrEmpty(googleSheetsUrl)) return;
 
-            var pattern = @"\/spreadsheets\/d\/([0-9a-zA-Z]+)\/";
+            var pattern = @"\/spreadsheets\/d\/([0-9a-zA-Z_-]+)\/";
             var sheetId = Regex.Match(googleSheetsUrl, pattern);
             if (sheetId is null || !sheetId.Success || sheetId.Groups.Count < 2) return;
                         
