@@ -539,18 +539,9 @@ namespace PlenBotLogUploader
                 {
                     buttonUpdate.Enabled = false;
                 }
-                var response = await HttpClientController.DownloadFileToStringAsync(plenbotVersionFileURL) ?? "0";
-                if (!int.TryParse(response, out var currentVersion))
-                {
-                    if (!quietFail)
-                    {
-                        AddToText(">>> Could not verify the version release.");
-                    }
-                    timerCheckUpdate.Enabled = true;
-                    timerCheckUpdate.Start();
-                    return;
-                }
-                if (currentVersion <= ApplicationSettings.Version)
+
+                var currentVersion = await HttpClientController.DownloadFileToStringAsync(plenbotVersionFileURL) ?? "0";
+                if (string.Compare(currentVersion, ApplicationSettings.Version, StringComparison.Ordinal) <= 0)
                 {
                     if (!quietFail)
                     {
@@ -567,9 +558,9 @@ namespace PlenBotLogUploader
                     await PerformUpdate(appStartup);
                     return;
                 }
-                AddToText($">>> New release available (r{response})");
+                AddToText($">>> New release available (r{currentVersion})");
                 AddToText(">>> Read about all the changes here: https://github.com/bear-on-the-job/PlenBotLogUploader/releases/latest");
-                ShowBalloon("New release available for the uploader", $"If you want to update immediately, use the \"Update the uploader\" button.\nThe latest release is n. {response}.", 8500);
+                ShowBalloon("New release available for the uploader", $"If you want to update immediately, use the \"Update the uploader\" button.\nThe latest release is n. {currentVersion}.", 8500);
             }
             catch
             {

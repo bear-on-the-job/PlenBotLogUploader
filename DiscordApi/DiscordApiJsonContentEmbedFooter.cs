@@ -24,7 +24,7 @@ namespace PlenBotLogUploader.DiscordApi
         {
             return new()
             {
-                Text = $"PlenBot Log Uploader r.{ApplicationSettings.Version} (Bear.6)",
+                Text = $"PlenBot Log Uploader r.{ApplicationSettings.Version}",
                 IconUrl = "https://bear-on-the-job.github.io/bear.avatar.circle.png",
             };
         }
