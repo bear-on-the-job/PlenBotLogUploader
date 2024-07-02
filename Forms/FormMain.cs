@@ -8,6 +8,7 @@ using PlenBotLogUploader.DpsReport;
 using PlenBotLogUploader.GitHub;
 using PlenBotLogUploader.Gw2Api;
 using PlenBotLogUploader.Tools;
+using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,7 +16,6 @@ using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -73,11 +73,12 @@ namespace PlenBotLogUploader
         private readonly List<string> allSessionLogs = [];
         private readonly Regex songSmartCommandRegex = songRegex();
         private readonly Regex buildSmartCommandRegex = buildRegex();
+        private readonly RestClient logPoster;
         private SemaphoreSlim semaphore;
         private TwitchChatClient chatConnect;
         private readonly ArcLogsChangeObserver watcher;
         private int reconnectedFailCounter = 0;
-        private int recentUploadFailCounter = 0;
+        private readonly Dictionary<string, int> uploadFailCounters = [];
         private int logsCount = 0;
         private string lastLogMessage = "";
         private int lastLogBossId = 0;
@@ -141,6 +142,7 @@ namespace PlenBotLogUploader
             toolTip.SetToolTip(checkBoxAutoUpdate, "Automatically downloads the newest version when it is available.\nOnly occurs during the start of the application.");
             toolTip.SetToolTip(twitchCommandsLink.checkBoxSongEnable, "If checked, the given command will output current song from Spotify to Twitch chat.");
             #endregion
+            logPoster = new RestClient();
             try
             {
                 Size = ApplicationSettings.Current.MainFormSize;
@@ -373,6 +375,7 @@ namespace PlenBotLogUploader
             chatConnect?.Dispose();
             semaphore?.Dispose();
             HttpClientController?.Dispose();
+            logPoster?.Dispose();
             watcher?.Dispose();
             MumbleReader?.Dispose();
         }
@@ -600,23 +603,35 @@ namespace PlenBotLogUploader
             var args = Environment.GetCommandLineArgs();
             if (args.Length <= 1)
             {
+                await HandleLogReuploads();
                 return;
             }
-            if (((args.Length == 2) || (args.Length == 3)) && args[1].Equals("-m"))
-            {
-                StartedMinimised = true;
-                WindowState = FormWindowState.Minimized;
-                if (checkBoxTrayMinimiseToIcon.Checked)
-                {
-                    ShowInTaskbar = false;
-                    Hide();
-                }
-                return;
-            }
+            var argIndex = -1;
+            var skipOne = false;
             foreach (var arg in args)
             {
-                if (arg.Equals(Application.ExecutablePath))
+                argIndex++;
+                if (skipOne || arg.Equals(Application.ExecutablePath))
                 {
+                    continue;
+                }
+                if (arg.Equals("-m"))
+                {
+                    StartedMinimised = true;
+                    WindowState = FormWindowState.Minimized;
+                    if (checkBoxTrayMinimiseToIcon.Checked)
+                    {
+                        ShowInTaskbar = false;
+                        Hide();
+                    }
+                }
+                if (arg.Equals("-ml"))
+                {
+                    if (args.Length > (argIndex + 1))
+                    {
+                        MumbleReader = new MumbleReader(false, args[argIndex + 1]);
+                        skipOne = true;
+                    }
                     continue;
                 }
                 if (File.Exists(arg) && (arg.EndsWith(".evtc") || arg.EndsWith(".zevtc")))
@@ -647,7 +662,7 @@ namespace PlenBotLogUploader
                     }
                 }
             }
-            LogReuploader.ProcessLogs(HttpUploadLogAsync);
+            await HandleLogReuploads();
         }
 
         protected async Task ValidateGW2Tokens()
@@ -719,49 +734,67 @@ namespace PlenBotLogUploader
 
         internal async Task HttpUploadLogAsync(string file, Dictionary<string, string> postData, bool bypassMessage = false)
         {
-            using var content = new MultipartFormDataContent();
-            foreach (var key in postData.Keys)
-            {
-                content.Add(new StringContent(postData[key]), key);
-            }
             AddToText($">:> Uploading {Path.GetFileName(file)}");
-            var bossId = 1;
+            var request = new RestRequest(CreateDPSReportLink());
+            request.AddBody(postData);
             try
             {
-                using var inputStream = File.OpenRead(file);
-                using var contentStream = new StreamContent(inputStream);
-                content.Add(contentStream, "file", Path.GetFileName(file));
+                request.AddFile("file", file);
                 try
                 {
-                    using var responseMessage = await HttpClientController.PostAsync(CreateDPSReportLink(), content);
+                    var responseMessage = await logPoster.PostAsync(request);
                     if (!responseMessage.IsSuccessStatusCode)
                     {
                         var statusCode = (int)responseMessage.StatusCode;
-                        if ((statusCode == 408) || (statusCode == 429))
+                        if ((statusCode == 403) || (statusCode == 408))
                         {
-                            AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report responded with Too-Many-Logs-Per-Minute error (429). Log will be reuploaded in 15 minutes.");
+                            if (statusCode == 403)
+                            {
+                                AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report responded with a Forbidden error (403). Log will be reuploaded shortly.");
+                            }
+                            else if (statusCode == 408)
+                            {
+                                AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report responded with a Timeout error (408). Log will be reuploaded shortly.");
+                            }
+                            await HandleQuickLogUploadRetry(file, postData, bypassMessage);
+                            return;
+                        }
+                        else if ((statusCode == 429) || (statusCode >= 500))
+                        {
+                            if (statusCode == 429)
+                            {
+                                AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report responded with Too-Many-Logs-Per-Minute error (429). Log has been added to the reuploader queue.");
+                            }
+                            else if (statusCode >= 500)
+                            {
+                                AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report responded with a server processing error (>=500). Log has been added to the reuploader queue.");
+                            }
                             LogReuploader.FailedLogs.Add(file);
                             LogReuploader.SaveFailedLogs();
-                            timerFailedLogsReupload.Enabled = true;
-                            timerFailedLogsReupload.Stop();
-                            timerFailedLogsReupload.Start();
+                            EnsureReuploadTimerStart();
                             return;
                         }
-                        AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report responded with an non-ok status code ({(int)responseMessage.StatusCode})");
+                        AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report responded with an non-ok status code ({(int)responseMessage.StatusCode}).");
                         return;
                     }
-                    var response = await responseMessage.Content.ReadAsStringAsync();
-                    // workaround for deserialisation and consequent application crash if the player list is an empty array, in case the log being corrupted
-                    response = response?.Replace("\"players\": []", "\"players\": {}");
                     try
                     {
-                        var reportJson = JsonConvert.DeserializeObject<DpsReportJson>(response);
+                        var messageContent = responseMessage.Content;
+                        messageContent = messageContent?.Replace("\"players\": []", "\"players\": {}");
+                        var reportJson = JsonConvert.DeserializeObject<DpsReportJson>(messageContent);
                         if (!string.IsNullOrEmpty(reportJson.Error))
                         {
-                            AddToText($">:> Unable to process file {Path.GetFileName(file)}, dps.report responded with following error message: {reportJson.Error}");
-                            return;
+                            AddToText($">:> Error processing file {Path.GetFileName(file)}, dps.report responded with following error message: {reportJson.Error}");
+                            if (string.IsNullOrWhiteSpace(reportJson.Permalink))
+                            {
+                                return;
+                            }
+                            else
+                            {
+                                AddToText($">:> Despite the error, log link has been generated, processing upload...");
+                            }
                         }
-                        bossId = reportJson.Encounter.BossId;
+                        var bossId = reportJson.Encounter.BossId;
                         var success = (reportJson.Encounter.Success ?? false) ? "true" : "false";
                         lastLogBossCM = reportJson.ChallengeMode;
                         // extra JSON from Elite Insights
@@ -850,34 +883,50 @@ namespace PlenBotLogUploader
                 catch
                 {
                     AddToText($">:> Unable to upload file {Path.GetFileName(file)}, dps.report not responding");
-                    Interlocked.Increment(ref recentUploadFailCounter);
-                    if (recentUploadFailCounter > 3)
-                    {
-                        Interlocked.Exchange(ref recentUploadFailCounter, 0);
-                        AddToText($">:> Upload retry failed 3 times for {Path.GetFileName(file)}, will try again in 15m.");
-                        LogReuploader.FailedLogs.Add(file);
-                        LogReuploader.SaveFailedLogs();
-                        timerFailedLogsReupload.Enabled = true;
-                        timerFailedLogsReupload.Stop();
-                        timerFailedLogsReupload.Start();
-                    }
-                    else
-                    {
-                        var delay = recentUploadFailCounter switch
-                        {
-                            3 => 45000,
-                            2 => 15000,
-                            _ => 3000,
-                        };
-                        AddToText($">:> Retrying in {delay / 1000}s...");
-                        await Task.Delay(delay);
-                        await HttpUploadLogAsync(file, postData, bypassMessage);
-                    }
+                    await HandleQuickLogUploadRetry(file, postData, bypassMessage);
                 }
             }
             catch
             {
                 Thread.Sleep(1000);
+                await HttpUploadLogAsync(file, postData, bypassMessage);
+            }
+        }
+
+        internal async Task HandleQuickLogUploadRetry(string file, Dictionary<string, string> postData, bool bypassMessage)
+        {
+            if (uploadFailCounters.TryGetValue(file, out int uploadFailCounter))
+            {
+                if (uploadFailCounter > 4)
+                {
+                    uploadFailCounters.Remove(file);
+                    AddToText($">:> Upload retry failed 4 times for {Path.GetFileName(file)}, will try again during log reupload timer.");
+                    LogReuploader.FailedLogs.Add(file);
+                    LogReuploader.SaveFailedLogs();
+                    timerFailedLogsReupload.Enabled = true;
+                    timerFailedLogsReupload.Stop();
+                    timerFailedLogsReupload.Start();
+                }
+                else
+                {
+                    uploadFailCounters[file]++;
+                    var delay = uploadFailCounters[file] switch
+                    {
+                        4 => 180000,
+                        3 => 90000,
+                        2 => 30000,
+                        _ => 3000,
+                    };
+                    AddToText($">:> Retrying in {delay / 1000}s...");
+                    await Task.Delay(delay);
+                    await HttpUploadLogAsync(file, postData, bypassMessage);
+                }
+            }
+            else
+            {
+                uploadFailCounters.Add(file, 1);
+                AddToText($">:> Retrying in 3s...");
+                await Task.Delay(3000);
                 await HttpUploadLogAsync(file, postData, bypassMessage);
             }
         }
@@ -1180,9 +1229,16 @@ namespace PlenBotLogUploader
                     }
                     using var gw2Api = new Gw2ApiHelper(trueApiKey.ApiKey);
                     var userInfo = await gw2Api.GetUserInfoAsync();
-                    if ((userInfo is not null) && Gw2.AllServers.TryGetValue(userInfo.World, out var playerWorld))
+                    if (userInfo is not null)
                     {
-                        await chatConnect.SendChatMessageAsync(ApplicationSettings.Current.Twitch.ChannelName, $"GW2 Account name: {userInfo.Name} | Server: {playerWorld.Name} ({playerWorld.Region})");
+                        if (Gw2.AllServers.TryGetValue(userInfo.World ?? 0, out var playerWorld))
+                        {
+                            await chatConnect.SendChatMessageAsync(ApplicationSettings.Current.Twitch.ChannelName, $"GW2 Account name: {userInfo.Name} | Server: {playerWorld.Name} ({playerWorld.Region})");
+                        }
+                        else
+                        {
+                            await chatConnect.SendChatMessageAsync(ApplicationSettings.Current.Twitch.ChannelName, $"GW2 Account name: {userInfo.Name})");
+                        }
                     }
                     else
                     {
@@ -1604,11 +1660,42 @@ namespace PlenBotLogUploader
             _ = NewReleaseCheckAsync(false, true);
         }
 
-        private void TimerFailedLogsReupload_Tick(object sender, EventArgs e)
+        private async void TimerFailedLogsReupload_Tick(object sender, EventArgs e)
         {
+            await HandleReuploadTimerStop();
+        }
+
+        private void EnsureReuploadTimerStart()
+        {
+            if (timerFailedLogsReupload.Enabled)
+            {
+                return;
+            }
+            timerFailedLogsReupload.Enabled = true;
             timerFailedLogsReupload.Stop();
+            timerFailedLogsReupload.Start();
+        }
+
+        private async Task HandleReuploadTimerStop()
+        {
+            if (!timerFailedLogsReupload.Enabled)
+            {
+                return;
+            }
             timerFailedLogsReupload.Enabled = false;
-            LogReuploader.ProcessLogs(HttpUploadLogAsync);
+            timerFailedLogsReupload.Stop();
+            await HandleLogReuploads();
+        }
+
+        private async Task HandleLogReuploads()
+        {
+            if (LogReuploader.FailedLogs.Count == 0)
+            {
+                return;
+            }
+            AddToText($">:> Starting log reuploads of {LogReuploader.FailedLogs.Count} log{(LogReuploader.FailedLogs.Count > 1 ? "s" : "")}...");
+            await LogReuploader.ProcessLogs(semaphore, HttpUploadLogAsync);
+            AddToText(">:> Log reuploading has ended.");
         }
 
         private void ComboBoxMaxUploads_SelectedIndexChanged(object sender, EventArgs e)
@@ -1664,7 +1751,12 @@ namespace PlenBotLogUploader
 
         private void FormMain_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (ApplicationSettings.Current.CloseToTray && !bypassCloseToTray)
+            if (WindowState == FormWindowState.Minimized)
+            {
+                // shutdown during minimised status is permitted
+                e.Cancel = false;
+            }
+            else if (ApplicationSettings.Current.CloseToTray && !bypassCloseToTray)
             {
                 WindowState = FormWindowState.Minimized;
                 e.Cancel = true;

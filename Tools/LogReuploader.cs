@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PlenBotLogUploader.Tools
@@ -11,14 +12,14 @@ namespace PlenBotLogUploader.Tools
     {
         internal static readonly string fileLocation = $@"{ApplicationSettings.LocalDir}\faileduploads.txt";
 
-        private static List<string> _failedLogs;
+        private static HashSet<string> _failedLogs;
         private static readonly Dictionary<string, string> postData = new()
             {
                 { "generator", "ei" },
                 { "json", "1" }
             };
 
-        internal static List<string> FailedLogs
+        internal static HashSet<string> FailedLogs
         {
             get
             {
@@ -28,7 +29,7 @@ namespace PlenBotLogUploader.Tools
                     {
                         try
                         {
-                            _failedLogs = File.ReadAllLines(fileLocation).Where(File.Exists).ToList();
+                            _failedLogs = File.ReadAllLines(fileLocation).Where(File.Exists).ToHashSet();
                         }
                         catch
                         {
@@ -56,16 +57,21 @@ namespace PlenBotLogUploader.Tools
             }
         }
 
-        internal static void ProcessLogs(Func<string, Dictionary<string, string>, bool, Task> process)
+        internal static async Task ProcessLogs(SemaphoreSlim semaphore, Func<string, Dictionary<string, string>, bool, Task> process)
         {
-            foreach (var fileName in FailedLogs.ToArray().AsSpan())
+            foreach (var fileName in FailedLogs.ToArray())
             {
                 if (!File.Exists(fileName))
                 {
                     FailedLogs.Remove(fileName);
                     continue;
                 }
-                _ = process(fileName, postData, false);
+                await Task.Run(async () =>
+                {
+                    semaphore.Wait();
+                    await process(fileName, postData, true);
+                    semaphore.Release();
+                });
             }
         }
     }

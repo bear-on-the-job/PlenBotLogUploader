@@ -506,7 +506,7 @@ namespace PlenBotLogUploader
         }
 
         // Private method to create the Discord fields for each team (both friendly squad and enemies)
-        DiscordApiJsonContentEmbedField CreateTeamField<T>(DiscordWebhookData webhook, string name, IEnumerable<T> team)
+        DiscordApiJsonContentEmbedField CreateTeamField<T>(DiscordWebhookData webhook, string name, IEnumerable<T> team, IEnumerable<T> nonSquad = null)
         {
             var teamCount = team.Count();
             var teamDamage = team switch
@@ -539,7 +539,15 @@ namespace PlenBotLogUploader
             teamSummary.SetColumnWidthRange(1, 15, 15);
 
             teamSummary.AddCell("Count:", tableCellLeftAlign);
-            teamSummary.AddCell($"{teamCount}", tableCellLeftAlign);
+
+            if (nonSquad?.Any() is true)
+            {
+                teamSummary.AddCell($"{teamCount} (+{nonSquad.Count()})", tableCellLeftAlign);
+            }
+            else
+            {
+                teamSummary.AddCell($"{teamCount}", tableCellLeftAlign);
+            }
 
             teamSummary.AddCell("DMG:", tableCellLeftAlign);
             teamSummary.AddCell($"{teamDamage.ParseAsK()}", tableCellLeftAlign);
@@ -710,7 +718,7 @@ namespace PlenBotLogUploader
 
                 if (reportJSON.ExtraJson is not null)
                 {
-                    var squadField = CreateTeamField(webhook, "Squad Summary", reportJSON.ExtraJson.Players.Where(x => !x.FriendlyNpc && !x.NotInSquad));
+                    var squadField = CreateTeamField(webhook, "Squad Summary", reportJSON.ExtraJson.Players.Where(x => !x.FriendlyNpc && !x.NotInSquad), reportJSON.ExtraJson.Players.Where(x => !x.FriendlyNpc && x.NotInSquad));
 
                     // enemy summary field
                     var enemyFields = new List<DiscordApiJsonContentEmbedField>();
