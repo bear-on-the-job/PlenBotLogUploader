@@ -1,40 +1,40 @@
 ﻿using Newtonsoft.Json;
 
-namespace PlenBotLogUploader.DpsReport.ExtraJson
+namespace PlenBotLogUploader.DpsReport.ExtraJson;
+
+internal sealed class Target
 {
-    public sealed class Target
-    {
-        [JsonProperty("id")]
-        public int Id { get; set; }
+    [JsonProperty("id")]
+    internal int Id { get; set; }
 
-        [JsonProperty("name")]
-        public string Name { get; set; }
+    [JsonProperty("name")]
+    public string Name { get; set; }
 
-        [JsonProperty("isFake")]
-        public bool IsFake { get; set; }
+    [JsonProperty("isFake")]
+    public bool IsFake { get; set; }
 
-        [JsonProperty("dpsAll")]
-        public DpsAll[] DpsAll { get; set; }
+    [JsonProperty("dpsAll")]
+    public DpsAll[] DpsAll { get; set; }
 
-        [JsonProperty("statsAll")]
-        public StatsAll[] StatsAll { get; set; }
+    [JsonProperty("statsAll")]
+    public StatsAll[] StatsAll { get; set; }
 
-        [JsonProperty("defenses")]
-        public Defenses[] Defenses { get; set; }
+    [JsonProperty("defenses")]
+    public Defenses[] Defenses { get; set; }
 
-        [JsonProperty("totalHealth")]
-        public long TotalHealth { get; set; }
+    [JsonProperty("totalHealth")]
+    public long TotalHealth { get; set; }
 
-        [JsonProperty("healthPercentBurned")]
-        public double HealthPercentBurned { get; set; }
+    [JsonProperty("healthPercentBurned")]
+    public double HealthPercentBurned { get; set; }
 
-        [JsonProperty("enemyPlayer")]
-        public bool EnemyPlayer { get; set; }
+    [JsonProperty("enemyPlayer")]
+    public bool EnemyPlayer { get; set; }
 
-        [JsonProperty("teamId")]
-        public int TeamId { get; set; }
+    [JsonProperty("teamId")]
+    public int TeamId { get; set; }
 
-        [JsonProperty("buffs")]
-        public Buffs[] Buffs { get; set; }
-    }
+    [JsonProperty("buffs")]
+    public Buffs[] Buffs { get; set; }
 }
+

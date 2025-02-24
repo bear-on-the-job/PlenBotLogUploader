@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace PlenBotLogUploader.DpsReport.ExtraJson
 {
@@ -9,5 +10,8 @@ namespace PlenBotLogUploader.DpsReport.ExtraJson
 
         [JsonProperty("buffData")]
         public BuffData[] BuffData { get; set; }
+
+        [JsonProperty("statesPerSource")]
+        public Dictionary<string, List<int[]>> StatesPerSource { get; set; }
     }
 }
